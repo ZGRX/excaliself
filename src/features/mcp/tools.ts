@@ -18,6 +18,7 @@ import { listFolders } from "@/features/folders/list"
 import { folderPaths } from "@/features/folders/subtree"
 import { listUpdates } from "@/features/list-updates/hub"
 import { accessibleTo } from "@/features/spaces/access"
+import packageJson from "../../../package.json"
 import { buildScene } from "./scene/build"
 import { parseMermaid } from "./scene/mermaid"
 import {
@@ -42,7 +43,7 @@ const json = (value: unknown) => text(JSON.stringify(value))
 /** One per request: the server knows its member and the instance's origin. */
 export function createMcpServer(db: Db, member: Member, origin: string) {
   const server = new McpServer(
-    { name: "excaliself", version: "1.0.0" },
+    { name: "excaliself", version: packageJson.version },
     {
       // Bounds the work one create_drawing call can ask for.
       maxToolInputElements: 20_000,
