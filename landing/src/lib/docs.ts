@@ -4,7 +4,7 @@ import { getCollection } from "astro:content"
 const sidebar = [
   { label: "Get started", pages: ["index"] },
   { label: "Deploy", pages: ["docker-compose", "coolify", "backup-restore"] },
-  { label: "Configure", pages: ["environment"] },
+  { label: "Configure", pages: ["environment", "single-sign-on"] },
   { label: "Use", pages: ["team-space", "sharing", "team-library", "organize", "import", "mcp"] },
   { label: "Administer", pages: ["members", "admin-recovery"] },
   { label: "Develop", pages: ["local-development"] },

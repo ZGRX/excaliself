@@ -4,7 +4,8 @@ description: Invite people, set roles, reset passwords, and remove accounts.
 ---
 
 The first visitor creates the admin account at `/setup`. After that, people join
-only with an invite link. Admins manage the instance under **Settings**, in
+with an invite link, or with [single sign-on](/docs/single-sign-on/) if you set
+it up. Admins manage the instance under **Settings**, in
 **Members**, **Invites**, and **Instance**.
 
 ## Invite someone
@@ -29,7 +30,9 @@ If no admin can sign in, see [Recover admin access](/docs/admin-recovery/).
 
 Deleting a member permanently deletes their account and their private drawings
 and folders. This cannot be undone. Their Team drawings stay, and their
-[access tokens](/docs/mcp/#access) stop working.
+[access tokens](/docs/mcp/#access) stop working. If they can sign in with
+[single sign-on](/docs/single-sign-on/#who-gets-in), remove them in your
+provider too, or they can come back.
 
 ## Your own account
 

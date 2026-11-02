@@ -31,8 +31,8 @@ docker compose up -d
 ## Create the admin account
 
 Open `BASE_URL`. The first visit goes to `/setup`, where you create the admin
-account. After that, sign-up is invite-only: admins send invite links from
-**Settings**.
+account. After that, admins send invite links from **Settings**. You can also
+let people sign in with [Google, Microsoft, or OIDC](/docs/single-sign-on/).
 
 ## Next steps
 

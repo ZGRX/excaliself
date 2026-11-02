@@ -20,6 +20,19 @@ To use your own Postgres, change `DATABASE_URL` in the compose file.
 
 `GET /api/health` returns `200` when the app is up and can reach Postgres.
 
+## Single sign-on
+
+Optional. Each provider is on when its variables are set. See
+[Single sign-on](/docs/single-sign-on/) for the setup and who can join.
+
+| Variable | Description |
+|---|---|
+| `SSO_ALLOWED_DOMAINS` | Comma-separated email domains whose people join on their first sign-in, e.g. `acme.com,acme.de` |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google sign-in, for Google Workspace accounts |
+| `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`, `MICROSOFT_TENANT_ID` | Microsoft Entra ID sign-in, for one tenant |
+| `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` | Sign-in with one OIDC provider |
+| `OIDC_NAME` | Label of the OIDC button (default `SSO`) |
+
 ## Previews
 
 For throwaway pull request instances. See
