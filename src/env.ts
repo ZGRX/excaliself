@@ -4,6 +4,18 @@ import { z } from "zod"
 // Accepts true/false, 1/0, yes/no, on/off.
 const flag = () => z.stringbool().default(false)
 
+// Comma-separated list, trimmed, empties dropped.
+const list = () =>
+  z
+    .string()
+    .transform((value) =>
+      value
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean),
+    )
+    .default([])
+
 // Read up front because the flag decides the shape of the schema below.
 // Empty string counts as unset, matching emptyStringAsUndefined.
 const previewMode = flag().parse(process.env.PREVIEW_MODE || undefined)
@@ -24,15 +36,30 @@ export const env = createEnv({
     PREVIEW_MODE: flag(),
     // Comma-separated host patterns a preview answers on, e.g.
     // "*.draw.example.com". Auth refuses any other host.
-    PREVIEW_HOSTS: z
+    PREVIEW_HOSTS: list(),
+    // Single sign-on. A provider is on when its client ID is set. See
+    // https://excaliself.com/docs/single-sign-on/
+    GOOGLE_CLIENT_ID: z.string().optional(),
+    GOOGLE_CLIENT_SECRET: z.string().optional(),
+    MICROSOFT_CLIENT_ID: z.string().optional(),
+    MICROSOFT_CLIENT_SECRET: z.string().optional(),
+    // One tenant only: the multi-tenant values let any Microsoft account in.
+    MICROSOFT_TENANT_ID: z
       .string()
-      .transform((list) =>
-        list
-          .split(",")
-          .map((host) => host.trim())
-          .filter(Boolean),
+      .refine(
+        (id) => !["common", "organizations", "consumers"].includes(id),
+        "MICROSOFT_TENANT_ID must be your own tenant ID",
       )
-      .default([]),
+      .optional(),
+    OIDC_ISSUER: z.url().optional(),
+    OIDC_CLIENT_ID: z.string().optional(),
+    OIDC_CLIENT_SECRET: z.string().optional(),
+    // Button label: "Continue with <OIDC_NAME>".
+    OIDC_NAME: z.string().default("SSO"),
+    // Email domains whose people get an account on their first SSO sign-in.
+    SSO_ALLOWED_DOMAINS: list().transform((domains) =>
+      domains.map((domain) => domain.toLowerCase()),
+    ),
     // Where the Excalidraw+ import calls the public API. Override it only to
     // test against a fake server.
     EXCALIDRAW_PLUS_API_URL: z.url().default("https://api.excalidraw.com"),

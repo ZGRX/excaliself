@@ -107,6 +107,7 @@ function makeClient({
     email: "ada@example.com",
     name: "Ada",
     role: "user",
+    hasPassword: true,
     teamEnabled,
   })
   return client

@@ -146,7 +146,17 @@ export const resetPasswordWithToken = createServerFn({ method: "POST" })
           ),
         )
         .returning({ id: accounts.id })
-      if (updated.length === 0) throw new Error("Failed to set password")
+      // An SSO-only member has no credential row yet; the link adds one.
+      // Better Auth keys credential rows by the user's id.
+      if (updated.length === 0) {
+        await tx.insert(accounts).values({
+          id: randomUUID(),
+          userId,
+          accountId: userId,
+          providerId: "credential",
+          password: hash,
+        })
+      }
 
       // Every existing session dies — the holder of the link may not be
       // the only one signed in as this user.

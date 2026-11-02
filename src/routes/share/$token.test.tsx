@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import {
   cleanup,
   fireEvent,
@@ -40,6 +41,9 @@ vi.mock("@tanstack/react-router", () => ({
 
 vi.mock("@/features/shares/server", () => ({ resolveShareToken: vi.fn() }))
 vi.mock("@/features/spaces/server", () => ({ isOpenAsTeam: vi.fn() }))
+vi.mock("@/features/auth/server", () => ({
+  getSignInOptions: vi.fn().mockResolvedValue({ ssoProviders: [] }),
+}))
 
 // The real one drags Excalidraw into jsdom; this slice is about the states
 // around the canvas, not the canvas. The buttons stand in for the room
@@ -98,7 +102,11 @@ async function renderShare(resolution: ShareVisit) {
   const SharePage = (
     Route as unknown as { options: { component: React.ComponentType } }
   ).options.component
-  return render(<SharePage />)
+  return render(
+    <QueryClientProvider client={new QueryClient()}>
+      <SharePage />
+    </QueryClientProvider>,
+  )
 }
 
 // Auto-cleanup needs vitest globals, which this repo leaves off.

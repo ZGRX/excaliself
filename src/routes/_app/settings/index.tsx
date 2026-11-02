@@ -31,9 +31,15 @@ function AccountPage() {
     <div className="flex flex-col gap-8 animate-in fade-in-0 duration-200 motion-reduce:animate-none">
       <ProfileSection user={user} />
       <Separator />
-      <EmailSection user={user} />
-      <Separator />
-      <PasswordSection />
+      {user.hasPassword ? (
+        <>
+          <EmailSection user={user} />
+          <Separator />
+          <PasswordSection />
+        </>
+      ) : (
+        <SsoSignInSection email={user.email} />
+      )}
       <Separator />
       <SessionsSection />
       <Separator />
@@ -41,6 +47,21 @@ function AccountPage() {
       <Separator />
       <DangerZoneSection user={user} />
     </div>
+  )
+}
+
+// Members without a password can't re-authenticate for the email and
+// password forms. An admin password link adds a password.
+function SsoSignInSection({ email }: { email: string }) {
+  return (
+    <section>
+      <h2 className="text-sm font-medium text-foreground">Sign-in</h2>
+      <p className="text-xs text-muted-foreground">
+        You sign in as <span className="text-foreground">{email}</span> with
+        single sign-on. To also have a password, ask an admin for a password
+        link.
+      </p>
+    </section>
   )
 }
 

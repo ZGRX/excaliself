@@ -199,6 +199,7 @@ function renderTrashPage(
     email: "ada@example.com",
     name: "Ada",
     role: "user" as const,
+    hasPassword: true,
     teamEnabled,
   }
   client.setQueryData(trashQueryOptions().queryKey, items)

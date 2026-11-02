@@ -6,7 +6,7 @@ import { APIError } from "better-auth/api"
 import { and, eq, ne } from "drizzle-orm"
 import z from "zod"
 import { db } from "@/db"
-import { sessions, users } from "@/db/schema"
+import { accounts, sessions, users } from "@/db/schema"
 import {
   countOwnedContent,
   hardDeleteUser,
@@ -21,11 +21,12 @@ import { authMiddleware } from "@/middleware/auth"
 import { compareSessions } from "./sessions"
 
 // The caller's users row, plus teamEnabled, the instance-wide gate on every
-// Team UI element.
+// Team UI element. hasPassword is false for members who only use SSO.
 export const getCurrentUser = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
   .handler(async ({ context }) => {
-    const [[user], teamEnabled] = await Promise.all([
+    const userId = context.session.user.id
+    const [[user], [password], teamEnabled] = await Promise.all([
       db
         .select({
           id: users.id,
@@ -34,11 +35,20 @@ export const getCurrentUser = createServerFn({ method: "GET" })
           role: users.role,
         })
         .from(users)
-        .where(eq(users.id, context.session.user.id)),
+        .where(eq(users.id, userId)),
+      db
+        .select({ id: accounts.id })
+        .from(accounts)
+        .where(
+          and(
+            eq(accounts.userId, userId),
+            eq(accounts.providerId, "credential"),
+          ),
+        ),
       isTeamEnabled(db),
     ])
     if (!user) throw new Error("User not found")
-    return { ...user, teamEnabled }
+    return { ...user, hasPassword: password !== undefined, teamEnabled }
   })
 
 export type ChangeEmailResult =

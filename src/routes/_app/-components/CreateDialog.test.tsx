@@ -54,6 +54,7 @@ beforeEach(() => {
     email: "ada@example.com",
     name: "",
     role: "user",
+    hasPassword: true,
     teamEnabled: false,
   })
 })
@@ -242,6 +243,7 @@ test("while browsing Team, the dialog says so and creates in Team", async () => 
     email: "ada@example.com",
     name: "",
     role: "user",
+    hasPassword: true,
     teamEnabled: true,
   })
   routerSearch.current = { space: "team" }

@@ -143,6 +143,7 @@ function renderHome({
     email: "ada@example.com",
     name: "",
     role: "user",
+    hasPassword: true,
     teamEnabled,
   })
   return render(

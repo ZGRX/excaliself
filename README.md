@@ -33,6 +33,7 @@
 - **Trash** with restore. Deleted items are purged automatically after 30 days.
 - **Invite-only accounts.** The first visitor creates the admin account; everyone else joins by invite link.
 - **Connect your AI client.** Claude Code, Claude Desktop, and other MCP clients can find, read, and create drawings with a personal access token. The instance needs no LLM API key.
+- **Single sign-on** with Google Workspace, Microsoft Entra ID, or any OIDC provider (Okta, Authentik, Keycloak). People from your email domains join on their first sign-in, with no invite.
 - **Admin tools** under Settings: manage members and roles, create password-reset links, and see instance stats.
 - **Light and dark themes**, with an optional separate theme for the canvas.
 
@@ -92,6 +93,7 @@ Docker Compose reads these from `.env`. Coolify sets them for you.
 | `EXCALISELF_VERSION` | No | Image tag to run: `latest` (default), a release like `1.0.0` or `1.0`, or `main` |
 | `EXCALISELF_PORT` | No | Host port for the app (default `3000`). `127.0.0.1:3000` keeps it local to a reverse proxy |
 | `POSTGRES_USER`, `POSTGRES_DB` | No | Bundled Postgres user and database (default `excaliself`) |
+| `GOOGLE_*`, `MICROSOFT_*`, `OIDC_*`, `SSO_ALLOWED_DOMAINS` | No | Single sign-on. See [Single sign-on](https://excaliself.com/docs/single-sign-on/) |
 | `PREVIEW_MODE` | No | `true` runs a throwaway instance for a pull request preview: an in-memory PGlite instead of Postgres, seeded with an admin and example drawings. It ignores `DATABASE_URL` and `BASE_URL` and makes `BETTER_AUTH_SECRET` optional. `/preview/login` signs in as the admin (`admin@example.com` / `preview-password`), `/preview/login?account=new` as a new member. Data is lost on restart. See [PR previews](./docs/pr-previews.md) |
 | `PREVIEW_HOSTS` | With `PREVIEW_MODE` behind a domain | Comma-separated hosts a preview answers on, e.g. `*.draw.example.com`. Auth refuses other hosts; localhost always works |
 

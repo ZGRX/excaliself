@@ -58,6 +58,7 @@ function renderApp(initialEntry: string) {
     email: "ada@example.com",
     name: "Ada",
     role: "user",
+    hasPassword: true,
     teamEnabled: true,
   })
   client.setQueryData(drawingsQueryOptions().queryKey, [])

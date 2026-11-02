@@ -99,6 +99,7 @@ const viewer = {
   email: "ada@example.com",
   name: "",
   role: "admin" as const,
+  hasPassword: true,
   teamEnabled: false,
 }
 

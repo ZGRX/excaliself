@@ -15,6 +15,17 @@ services:
       - BASE_URL=${SERVICE_URL_EXCALISELF_3000}
       - BETTER_AUTH_SECRET=${SERVICE_PASSWORD_64_AUTH}
       - DATABASE_URL=postgresql://excaliself:${SERVICE_PASSWORD_POSTGRES}@db:5432/excaliself
+      # Optional single sign-on, see https://excaliself.com/docs/single-sign-on/
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - MICROSOFT_CLIENT_ID=${MICROSOFT_CLIENT_ID:-}
+      - MICROSOFT_CLIENT_SECRET=${MICROSOFT_CLIENT_SECRET:-}
+      - MICROSOFT_TENANT_ID=${MICROSOFT_TENANT_ID:-}
+      - OIDC_ISSUER=${OIDC_ISSUER:-}
+      - OIDC_CLIENT_ID=${OIDC_CLIENT_ID:-}
+      - OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET:-}
+      - OIDC_NAME=${OIDC_NAME:-}
+      - SSO_ALLOWED_DOMAINS=${SSO_ALLOWED_DOMAINS:-}
     depends_on:
       db:
         condition: service_healthy

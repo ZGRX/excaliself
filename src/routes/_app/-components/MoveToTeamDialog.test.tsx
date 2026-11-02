@@ -83,6 +83,7 @@ function renderOpener(
     email: "ada@example.com",
     name: "Ada",
     role: "user",
+    hasPassword: true,
     teamEnabled: options.teamEnabled ?? true,
   })
   client.setQueryData(drawingsQueryOptions().queryKey, drawings)
