@@ -172,7 +172,13 @@ function renderSidebar(teamEnabled: boolean) {
         <ActiveSpaceProvider>
           <MoveToTeamProvider>
             <DrawSidebar
-              user={{ email: "ada@example.com", name: "Ada", isAdmin: false }}
+              user={{
+                id: "u1",
+                createdAt: new Date(),
+                email: "ada@example.com",
+                name: "Ada",
+                isAdmin: false,
+              }}
             />
           </MoveToTeamProvider>
         </ActiveSpaceProvider>

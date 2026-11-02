@@ -12,6 +12,8 @@ import { userDisplayName, userInitials } from "@/features/account/display-name"
 import { authClient } from "@/lib/auth-client"
 
 export type SidebarUser = {
+  id: string
+  createdAt: Date
   email: string
   name: string | null
   isAdmin: boolean

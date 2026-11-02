@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query"
+import { GitHubMark, REPO_URL } from "@/components/github-mark"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatBytes } from "@/features/instance/format-bytes"
 import { instanceStatsQueryOptions } from "@/features/instance/queries"
 import { useDelayedVisible } from "@/hooks/use-delayed-visible"
 
-const RELEASES_URL = "https://github.com/maciekzygmunt/excaliself/releases"
+const RELEASES_URL = `${REPO_URL}/releases`
 
 // Read-only About page (spec §5.15): zero settings — instance behavior is
 // deliberately hardcoded, so this page only answers "what version am I on,
@@ -48,7 +49,7 @@ export function InstanceSection() {
         ))}
       </dl>
 
-      <p className="mt-4 text-xs text-muted-foreground">
+      <p className="mt-4 flex items-center gap-3 text-xs text-muted-foreground">
         <a
           href={RELEASES_URL}
           target="_blank"
@@ -56,6 +57,16 @@ export function InstanceSection() {
           className="underline underline-offset-2 transition-colors hover:text-foreground"
         >
           Release notes on GitHub
+        </a>
+        <span aria-hidden>·</span>
+        <a
+          href={REPO_URL}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1 underline underline-offset-2 transition-colors hover:text-foreground"
+        >
+          <GitHubMark className="h-3 w-3" />
+          Star on GitHub
         </a>
       </p>
     </section>

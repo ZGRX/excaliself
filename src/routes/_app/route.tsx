@@ -63,6 +63,8 @@ function AppShellLayout() {
             <CommandPaletteProvider>
               <DrawSidebar
                 user={{
+                  id: session.user.id,
+                  createdAt: session.user.createdAt,
                   email: currentUser?.email ?? session.user?.email ?? "",
                   name: currentUser?.name ?? null,
                   isAdmin,

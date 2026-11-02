@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils"
 import { useActiveSpace } from "../ActiveSpace"
 import { useCommandPalette } from "../CommandPalette"
 import { useCreateDialog } from "../CreateDialog"
+import { GitHubStarPrompt } from "./GitHubStarPrompt"
 import { SidebarNav, SidebarNavItem } from "./SidebarNav"
 import { type SidebarUser, SidebarUserMenu } from "./SidebarUserMenu"
 import { SpaceSegments } from "./SpaceSegments"
@@ -155,6 +156,13 @@ export function DrawSidebar({ user }: { user: SidebarUser }) {
         )}
 
         <SidebarFooter className="gap-0 p-2">
+          {user.isAdmin && (
+            <GitHubStarPrompt
+              userId={user.id}
+              createdAt={user.createdAt}
+              drawingCount={drawings.length}
+            />
+          )}
           {/* Pinned below the scroll region — Trash stays reachable no
               matter how tall the tree grows (spec §2.3). */}
           <SidebarMenu className="gap-0">
