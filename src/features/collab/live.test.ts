@@ -14,6 +14,7 @@ const OWNER = "user-owner"
 
 const fakePeer = (id: string): RoomPeer => ({
   id,
+  bufferedAmount: 0,
   send: (_data: ServerMessage) => {},
   publish: (_topic: string, _data: ServerMessage) => {},
   subscribe: (_topic: string) => {},

@@ -65,6 +65,7 @@ function recordingPeer(id: string) {
   const published: ServerMessage[] = []
   const peer: RoomPeer = {
     id,
+    bufferedAmount: 0,
     send: (data) => void sent.push(data),
     publish: (_topic, data) => void published.push(data),
     subscribe: () => {},

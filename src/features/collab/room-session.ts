@@ -6,6 +6,7 @@ import {
   SERVER_RESTART_CLOSE_CODE,
   SERVER_RESTART_CLOSE_REASON,
 } from "@/lib/socket/shutdown"
+import { utf8ByteLength } from "./frame-cap"
 import { guestNameForConnection, pickParticipantColor } from "./identity"
 import type { Participant, SceneElement, ServerMessage } from "./protocol"
 import {
@@ -25,6 +26,8 @@ import { isSyncableElement } from "./scene-sync"
 export interface RoomPeer {
   /** Random per socket. */
   readonly id: string
+  /** Bytes queued for this socket that it has not read yet. */
+  readonly bufferedAmount: number
   send(data: ServerMessage): void
   /** Never echoes to the sender. */
   publish(topic: string, data: ServerMessage): void
@@ -69,6 +72,8 @@ export type Room = {
   follows: Map<string, string>
   loaded: Promise<void>
   elements: SceneElement[]
+  /** Serialized size of `elements`, for the scene cap. */
+  bytes: number
   /** Cached for the live badge and the reserved seat; null until loaded. */
   access: AccessRow | null
   dirty: boolean
@@ -113,6 +118,7 @@ function ensureRoom(registry: RoomRegistry, roomId: string): Room {
     follows: new Map(),
     loaded: Promise.resolve(),
     elements: [],
+    bytes: 0,
     access: null,
     dirty: false,
     flushTimer: null,
@@ -139,6 +145,7 @@ function ensureRoom(registry: RoomRegistry, roomId: string): Room {
           SCENE_UNREADABLE_CLOSE_REASON,
         )
       room.elements = stored.elements
+      room.bytes = sceneBytes(stored.elements)
       room.access = stored.access
     },
     (error) => {
@@ -229,6 +236,20 @@ export async function closeAllRooms(registry: RoomRegistry): Promise<void> {
   )
 }
 
+/**
+ * A seat this far behind, past one full scene still on its way, has stopped
+ * reading. Closing it caps what we hold for it.
+ */
+export const MAX_SEAT_BUFFERED_BYTES = 8 * 1024 * 1024
+
+/** Fans out to every other seat, then hangs up on seats too far behind. */
+function publish(room: Room, peer: RoomPeer, message: ServerMessage) {
+  peer.publish(ROOM_TOPIC, message)
+  const limit = room.bytes + MAX_SEAT_BUFFERED_BYTES
+  for (const seat of room.seats.values())
+    if (seat.peer.bufferedAmount > limit) closeToRejoin(seat.peer)
+}
+
 function rosterOf(room: Room): Participant[] {
   return [...room.seats.values()].map((seat) => seat.participant)
 }
@@ -241,7 +262,7 @@ const rosterMessage = (room: Room): ServerMessage => ({
 function broadcastRoster(peer: RoomPeer, room: Room) {
   const message = rosterMessage(room)
   peer.send(message)
-  peer.publish(ROOM_TOPIC, message)
+  publish(room, peer, message)
 }
 
 /** Stops a script holding sockets open, not real sessions. The last seat is the owner's. */
@@ -368,7 +389,7 @@ export async function joinRoom(
     type: "ROOM_JOINED",
     payload: { connectionId: peer.id, participants: rosterOf(room) },
   })
-  peer.publish(ROOM_TOPIC, rosterMessage(room))
+  publish(room, peer, rosterMessage(room))
 
   await room.loaded
   if (room.seats.has(peer.id)) {
@@ -431,6 +452,29 @@ function setFollowTarget(
 const MAX_VERSION_JUMP = 2 ** 20
 
 /**
+ * Past either cap, a delta that grows the scene is refused whole, unheard.
+ * No close: the client would rejoin and resend it. Edits that don't grow
+ * the scene still merge.
+ */
+export const MAX_ROOM_ELEMENTS = 50_000
+export const MAX_ROOM_SCENE_BYTES = 20 * 1024 * 1024
+
+/** UTF-8 JSON size per element. Elements are kept by reference, so each is measured once. */
+const elementBytes = new WeakMap<SceneElement, number>()
+
+function bytesOf(element: SceneElement): number {
+  let bytes = elementBytes.get(element)
+  if (bytes === undefined) {
+    bytes = utf8ByteLength(JSON.stringify(element))
+    elementBytes.set(element, bytes)
+  }
+  return bytes
+}
+
+const sceneBytes = (elements: SceneElement[]) =>
+  elements.reduce((total, el) => total + bytesOf(el), 0)
+
+/**
  * Merges a delta; others get the winners, the sender only its corrections.
  * Stale tombstones go only to a sender who can open the drawing: others
  * never got them, and a guest must not read older deletions. Returns
@@ -451,10 +495,23 @@ function applySceneUpdate(
       el.version <=
       (previousById.get(el.id)?.version ?? newest) + MAX_VERSION_JUMP,
   )
-  room.elements = reconcileElements(previous, incoming, {})
-  const changed =
-    room.elements.length !== previous.length ||
-    room.elements.some((el) => previousById.get(el.id) !== el)
+  const merged = reconcileElements(previous, incoming, {})
+  let bytes = room.bytes
+  let changed = merged.length !== previous.length
+  for (const el of merged) {
+    const before = previousById.get(el.id)
+    if (before === el) continue
+    changed = true
+    bytes += bytesOf(el) - (before ? bytesOf(before) : 0)
+  }
+  const grows = merged.length > previous.length || bytes > room.bytes
+  if (
+    grows &&
+    (merged.length > MAX_ROOM_ELEMENTS || bytes > MAX_ROOM_SCENE_BYTES)
+  )
+    return false
+  room.elements = merged
+  room.bytes = bytes
 
   // Winners are kept by reference, so `winner !== element` means it lost.
   const authoritative = new Map(room.elements.map((el) => [el.id, el]))
@@ -471,7 +528,7 @@ function applySceneUpdate(
 
   const published = winners.filter((el) => isSyncableElement(el, now))
   if (published.length)
-    peer.publish(ROOM_TOPIC, {
+    publish(room, peer, {
       type: "SCENE_UPDATE",
       payload: { elements: published },
     })
@@ -552,7 +609,7 @@ export async function receiveFromPeer(
       return "ok"
 
     case "MOUSE_LOCATION":
-      peer.publish(ROOM_TOPIC, {
+      publish(room, peer, {
         type: "MOUSE_LOCATION",
         payload: { ...message.payload, connectionId: peer.id },
       })
@@ -578,7 +635,7 @@ export async function leaveRoom(
     reapIfIdle(registry, room)
     return
   }
-  peer.publish(ROOM_TOPIC, rosterMessage(room))
+  publish(room, peer, rosterMessage(room))
 }
 
 // --- link lifecycle ---

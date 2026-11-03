@@ -14,6 +14,7 @@ vi.mock("@tanstack/react-start", () => {
 })
 vi.mock("@tanstack/react-start/server", () => ({
   getRequestHeaders: () => new Headers(),
+  getRequest: () => new Request("http://localhost/"),
 }))
 vi.mock("@/lib/auth", () => ({
   auth: {
@@ -46,6 +47,7 @@ test("a reset link hangs up the room seats of the sessions it ends", async () =>
   const closes: { code: number; reason: string }[] = []
   const peer: RoomPeer = {
     id: "peer-1",
+    bufferedAmount: 0,
     send() {},
     publish() {},
     subscribe() {},

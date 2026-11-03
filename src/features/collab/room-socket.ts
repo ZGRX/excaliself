@@ -7,6 +7,10 @@ import {
   FRAME_TOO_LARGE_CLOSE_CODE,
 } from "@/features/collab/frame-cap"
 import {
+  createInboundBudget,
+  type InboundBudget,
+} from "@/features/collab/inbound-budget"
+import {
   LINK_DEAD_CLOSE_CODE,
   LINK_DEAD_CLOSE_REASON,
   ROOM_FULL_CLOSE_CODE,
@@ -39,6 +43,9 @@ const namespaceFor = (roomId: string) => `room:${roomId}`
  */
 export const lastPathSegment = (request: Request) =>
   new URL(request.url).pathname.split("/").pop() || ""
+
+/** Per socket; dies with its peer. */
+const budgets = new WeakMap<object, InboundBudget>()
 
 function roomContextOf(peer: { context: Record<string, unknown> }) {
   const { roomId, identity } = peer.context as Partial<{
@@ -121,12 +128,15 @@ export const defineRoomSocket = (
       if (exceedsFrameCap(message.rawData))
         return peer.close(FRAME_TOO_LARGE_CLOSE_CODE, "Frame too large")
 
-      const outcome = await receiveFromPeer(
-        rooms,
-        context.roomId,
-        peer,
-        message.text(),
-      )
+      // Over budget, frames are dropped unread. The client's next full sync
+      // heals a dropped edit; closing would only hand it a fresh budget.
+      const text = message.text()
+      const now = Date.now()
+      const budget = budgets.get(peer) ?? createInboundBudget(now)
+      budgets.set(peer, budget)
+      if (!budget.spend(Buffer.byteLength(text), now)) return
+
+      const outcome = await receiveFromPeer(rooms, context.roomId, peer, text)
       // Seat swept while the socket stayed open: close so the client rejoins.
       if (outcome === "evicted") peer.close(1000, "Rejoin")
     },

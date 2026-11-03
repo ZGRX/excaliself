@@ -18,7 +18,10 @@ import {
   evictUser,
   joinRoom,
   leaveRoom,
+  MAX_ROOM_ELEMENTS,
   MAX_ROOM_PARTICIPANTS,
+  MAX_ROOM_SCENE_BYTES,
+  MAX_SEAT_BUFFERED_BYTES,
   moveRoomToTeam,
   PARTICIPANT_IDLE_TIMEOUT_MS,
   ROOM_FLUSH_INTERVAL_MS,
@@ -46,8 +49,10 @@ function fakePeer(id: string) {
     published: typeof published
     topics: string[]
     closes: typeof closes
+    bufferedAmount: number
   } = {
     id,
+    bufferedAmount: 0,
     sent,
     published,
     topics,
@@ -232,6 +237,61 @@ test("a cursor is relayed to the rest of the room, stamped with its sender", asy
       },
     },
   })
+})
+
+const cursorFrame = JSON.stringify({
+  type: "MOUSE_LOCATION",
+  payload: {
+    pointer: { x: 0, y: 0, tool: "pointer" },
+    button: "up",
+    selectedElementIds: {},
+  },
+})
+
+test("a seat too far behind on reading is hung up on, not buffered for", async () => {
+  const registry = emptyRegistry()
+  const ada = fakePeer("peer-ada")
+  const grace = fakePeer("peer-grace")
+  await joinRoom(registry, ROOM, ada, member("Ada"))
+  await joinRoom(registry, ROOM, grace, guest)
+  grace.bufferedAmount = MAX_SEAT_BUFFERED_BYTES + 1
+
+  await receiveFromPeer(registry, ROOM, ada, cursorFrame)
+
+  expect(grace.closes).toEqual([{ code: 1000, reason: "Rejoin" }])
+  expect(ada.closes).toEqual([])
+})
+
+test("a seat that keeps up is left alone", async () => {
+  const registry = emptyRegistry()
+  const ada = fakePeer("peer-ada")
+  const grace = fakePeer("peer-grace")
+  await joinRoom(registry, ROOM, ada, member("Ada"))
+  await joinRoom(registry, ROOM, grace, guest)
+  grace.bufferedAmount = MAX_SEAT_BUFFERED_BYTES
+
+  await receiveFromPeer(registry, ROOM, ada, cursorFrame)
+
+  expect(grace.closes).toEqual([])
+})
+
+test("a joiner still taking in a large scene is not hung up on", async () => {
+  const scene = [element("big", 1, { text: "x".repeat(10 * 1024 * 1024) })]
+  const registry = registryFrom(async () => ({
+    elements: scene,
+    access: null,
+    readable: true,
+  }))
+  const ada = fakePeer("peer-ada")
+  const grace = fakePeer("peer-grace")
+  await joinRoom(registry, ROOM, ada, member("Ada"))
+  await joinRoom(registry, ROOM, grace, guest)
+  // The whole SCENE_INIT, plus some live traffic.
+  grace.bufferedAmount = 11 * 1024 * 1024
+
+  await receiveFromPeer(registry, ROOM, ada, cursorFrame)
+
+  expect(grace.closes).toEqual([])
 })
 
 test("garbage from a peer is dropped, not relayed", async () => {
@@ -644,6 +704,89 @@ test("an accepted edit needs no correction back to its sender", async () => {
   await receiveFromPeer(registry, ROOM, ada, sceneUpdate([element("rect", 1)]))
 
   expect(framesOf(ada, "SCENE_UPDATE")).toHaveLength(0)
+})
+
+/** A Room whose stored scene is `elements`. */
+async function roomOf(elements: SceneElement[]) {
+  const registry = registryFrom(async () => ({
+    elements,
+    access: null,
+    readable: true,
+  }))
+  const ada = fakePeer("peer-ada")
+  await joinRoom(registry, ROOM, ada, member("Ada"))
+  ada.published.length = 0
+  return { registry, ada }
+}
+
+test("a new element past the room's element cap is refused, and nobody hears it", async () => {
+  const full = Array.from({ length: MAX_ROOM_ELEMENTS }, (_, i) =>
+    element(`el-${i}`, 1),
+  )
+  const { registry, ada } = await roomOf(full)
+
+  await receiveFromPeer(
+    registry,
+    ROOM,
+    ada,
+    sceneUpdate([element("one-more", 1)]),
+  )
+
+  expect(registry.rooms.get(ROOM)?.elements).toHaveLength(MAX_ROOM_ELEMENTS)
+  expect(ada.published).toEqual([])
+})
+
+test("a delta past the room's byte cap is refused", async () => {
+  const { registry, ada } = await roomOf([
+    element("big", 1, { text: "x".repeat(MAX_ROOM_SCENE_BYTES) }),
+  ])
+
+  await receiveFromPeer(
+    registry,
+    ROOM,
+    ada,
+    sceneUpdate([
+      element("rect", 1),
+      element("big", 2, { text: "x".repeat(MAX_ROOM_SCENE_BYTES + 10) }),
+    ]),
+  )
+
+  expect(registry.rooms.get(ROOM)?.elements).toEqual([
+    element("big", 1, { text: "x".repeat(MAX_ROOM_SCENE_BYTES) }),
+  ])
+  expect(ada.published).toEqual([])
+})
+
+test("the byte cap counts UTF-8 bytes, not characters", async () => {
+  const { registry, ada } = await roomOf([])
+  // A third of the cap in characters, past it in bytes.
+  const text = "界".repeat(Math.ceil(MAX_ROOM_SCENE_BYTES / 3) + 1)
+
+  await receiveFromPeer(
+    registry,
+    ROOM,
+    ada,
+    sceneUpdate([element("cjk", 1, { text })]),
+  )
+
+  expect(registry.rooms.get(ROOM)?.elements).toEqual([])
+})
+
+test("a full room still takes edits that don't grow it", async () => {
+  const { registry, ada } = await roomOf([
+    element("big", 1, { text: "x".repeat(MAX_ROOM_SCENE_BYTES) }),
+  ])
+
+  await receiveFromPeer(
+    registry,
+    ROOM,
+    ada,
+    sceneUpdate([element("big", 2, { text: "short", isDeleted: true })]),
+  )
+
+  expect(registry.rooms.get(ROOM)?.elements).toEqual([
+    element("big", 2, { text: "short", isDeleted: true }),
+  ])
 })
 
 test("an edit that arrives before the scene has loaded still merges into it", async () => {

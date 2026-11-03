@@ -156,6 +156,7 @@ async function seat(roomId: string, owner: Device) {
   const closes: { code: number; reason: string }[] = []
   const peer = {
     id: `peer-${owner.sessionId}`,
+    bufferedAmount: 0,
     send() {},
     publish() {},
     subscribe() {},

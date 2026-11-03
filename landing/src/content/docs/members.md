@@ -22,7 +22,9 @@ A member is either an admin or a member. Change the role in **Settings**, then
 ## Reset a password
 
 In **Settings**, then **Members**, generate a reset link for the member and send
-it to them. The link is single-use and is valid for 24 hours.
+it to them. The link is single-use and is valid for 24 hours. The new password
+must have 8 to 128 characters. After 10 failed attempts in one minute, an IP
+address must wait for a minute.
 
 If no admin can sign in, see [Recover admin access](/docs/admin-recovery/).
 

@@ -2,7 +2,7 @@
 
 import { randomBytes, randomUUID } from "node:crypto"
 import { createServerFn } from "@tanstack/react-start"
-import { getRequestHeaders } from "@tanstack/react-start/server"
+import { getRequest, getRequestHeaders } from "@tanstack/react-start/server"
 import { and, eq, gt, isNull } from "drizzle-orm"
 import z from "zod"
 import { db } from "@/db"
@@ -10,6 +10,9 @@ import { accounts, passwordResets, sessions, users } from "@/db/schema"
 import { rooms } from "@/features/collab/room-registry"
 import { evictSessions } from "@/features/collab/room-session"
 import { auth } from "@/lib/auth"
+import { clientIpKey, socketIpOf } from "@/lib/client-ip"
+import { processSingleton } from "@/lib/process-singleton"
+import { createRateLimiter } from "@/lib/rate-limit"
 import { adminMiddleware } from "@/middleware/admin"
 
 const usableReset = (token: string) =>
@@ -106,11 +109,40 @@ export const validatePasswordReset = createServerFn({ method: "GET" })
     return { email: reset.email }
   })
 
+/** Per IP. A good link never spends it; it only slows scripted guessing. */
+export const FAILED_RESETS_PER_MINUTE = 10
+
+const failedResets = processSingleton("password-reset-rate-limit", () =>
+  createRateLimiter({ limit: FAILED_RESETS_PER_MINUTE, windowMs: 60_000 }),
+)
+
 export const resetPasswordWithToken = createServerFn({ method: "POST" })
   .validator(
-    z.object({ token: z.string().min(1), password: z.string().min(8) }),
+    z.object({
+      token: z.string().min(1),
+      // better-auth's own maximum.
+      password: z.string().min(8).max(128),
+    }),
   )
   .handler(async ({ data }) => {
+    const request = getRequest()
+    const ip = clientIpKey({
+      headers: request.headers,
+      socketIp: socketIpOf(request),
+    })
+    if (failedResets.exhausted(ip, Date.now()))
+      throw new Error("Too many attempts. Try again in a minute.")
+
+    // A cheap read first: the hash below costs 32 MiB of scrypt.
+    const [usable] = await db
+      .select({ id: passwordResets.id })
+      .from(passwordResets)
+      .where(usableReset(data.token))
+    if (!usable) {
+      failedResets.allow(ip, Date.now())
+      throw new Error("Invalid or expired reset link")
+    }
+
     // Hash with better-auth's own hasher so signInEmail verifies against it;
     // the credential row is written directly — same direct-drizzle style as
     // the rest of the codebase.

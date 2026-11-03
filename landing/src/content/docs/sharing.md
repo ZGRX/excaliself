@@ -38,4 +38,10 @@ exists.
 - A live drawing has 25 seats. One seat is kept for the owner.
 - An image can be up to 2 MB, and a drawing can store up to 20 MB of images.
   Other people see a placeholder for an image that is refused.
+- A live drawing holds up to 50,000 elements (deleted ones count) and 20 MB of
+  drawing data, not counting images. Past that, new content does not sync or
+  save. Changes that do not make the drawing larger still sync.
+- A connection that stops reading is closed when its unread data passes the
+  size of the drawing plus 8 MB. The app reconnects by itself and loads the
+  drawing again.
 - Guests do not see the [Team library](/docs/team-library/).

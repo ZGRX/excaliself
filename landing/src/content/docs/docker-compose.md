@@ -32,6 +32,11 @@ with TLS (Caddy, Traefik, nginx) in front of it and set `BASE_URL` to the
 public `https://` URL. Auth rejects sign-ins from any other origin. Set
 `EXCALISELF_PORT=127.0.0.1:3000` to keep the app port local to the proxy.
 
+Rate limits, sign-in included, count per client IP address. The app trusts
+`X-Forwarded-For` only from a proxy on a private address (such as `127.0.0.1`
+or a Docker network). If your proxy connects from a public address, all its
+clients count as one.
+
 Live collaboration and all Team drawings use WebSockets on the app port, under
 `/ws/`, so the proxy must pass them through. Caddy and Traefik do this by default:
 
@@ -42,7 +47,7 @@ draw.example.com {
 ```
 
 nginx needs the upgrade headers. Its default 1 MB body limit is also too small
-for images:
+for images. The app itself refuses request bodies over 64 MB:
 
 ```nginx
 location / {

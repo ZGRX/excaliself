@@ -1,4 +1,5 @@
 import { expect, test, vi } from "vitest"
+import { INBOUND_FRAME_BURST } from "@/features/collab/inbound-budget"
 import {
   FAILED_TOKEN_LOOKUPS_PER_MINUTE,
   recordFailedTokenLookup,
@@ -9,10 +10,21 @@ import type { RoomJoin } from "./room-token"
 vi.mock("nitro", () => ({ defineWebSocketHandler: (hooks: unknown) => hooks }))
 vi.mock("./room-registry", () => ({ rooms: {} }))
 vi.mock("@/env", () => ({ env: {} }))
+const receiveFromPeer = vi.hoisted(() => vi.fn(async () => "ok"))
+vi.mock("./room-session", async (original) => ({
+  ...(await original()),
+  receiveFromPeer,
+}))
 
 const { defineRoomSocket } = await import("./room-socket")
 
 type Upgrade = { upgrade(request: Request): Promise<unknown> }
+type Message = {
+  message(
+    peer: unknown,
+    message: { rawData: string; text(): string },
+  ): Promise<void>
+}
 
 const socket = (join: RoomJoin, limitFailures: boolean) =>
   defineRoomSocket(async () => join, { limitFailures }) as unknown as Upgrade
@@ -70,4 +82,21 @@ test("a sibling-subdomain page is refused, so open closes it as a dead link", as
   await expect(socket(admitted, false).upgrade(sibling)).resolves.toBe(
     undefined,
   )
+})
+
+test("frames past a socket's budget are dropped unread", async () => {
+  vi.useFakeTimers()
+  const entry = socket(admitted, false) as unknown as Message
+  const peer = {
+    context: { roomId: "drawing-1", identity: admitted },
+    close: vi.fn(),
+  }
+  const ping = '{"type":"PING","payload":{}}'
+
+  for (let i = 0; i < INBOUND_FRAME_BURST + 5; i++)
+    await entry.message(peer, { rawData: ping, text: () => ping })
+
+  expect(receiveFromPeer).toHaveBeenCalledTimes(INBOUND_FRAME_BURST)
+  expect(peer.close).not.toHaveBeenCalled()
+  vi.useRealTimers()
 })
