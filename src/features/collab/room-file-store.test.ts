@@ -6,6 +6,7 @@ import { MAX_DRAWING_IMAGE_BYTES } from "./room-files"
 
 type Call =
   | { kind: "select"; where: SQL }
+  | { kind: "lock"; where: SQL }
   | { kind: "insert"; values: Record<string, unknown> }
 
 /** Renders a captured drizzle condition, so room scoping is assertable. */
@@ -27,13 +28,22 @@ const ROW = {
 function fakeDb(rows: unknown[] = [], storedBytes = 0) {
   const calls: Call[] = []
   const db = {
+    transaction: (run: (tx: unknown) => unknown) => run(db),
     select: (fields: Record<string, unknown>) => ({
       from: () => ({
         where: (where: SQL) => {
-          calls.push({ kind: "select", where })
-          return Promise.resolve(
+          const call: Call = { kind: "select", where }
+          calls.push(call)
+          const result = Promise.resolve(
             "total" in fields ? [{ total: storedBytes }] : rows,
           )
+          // `.for("update")` marks the drawing row lock.
+          return Object.assign(result, {
+            for: () => {
+              calls[calls.indexOf(call)] = { kind: "lock", where }
+              return result
+            },
+          })
         },
       }),
     }),
@@ -80,6 +90,18 @@ test("the existence check is scoped to the drawing and the file", async () => {
   const select = calls.find((call) => call.kind === "select")
   expect(toSql(select?.where as SQL)).toContain(`"drawingId"`)
   expect(toSql(select?.where as SQL)).toContain(`"fileId"`)
+})
+
+test("the drawing row is locked before the cap check", async () => {
+  // PGlite runs one transaction at a time, so only Postgres shows the race.
+  const { db, calls } = fakeDb()
+
+  await saveRoomFile(db, "drawing-1", FILE)
+
+  expect(calls[0]?.kind).toBe("lock")
+  expect(toSql((calls[0] as Extract<Call, { kind: "lock" }>).where)).toContain(
+    `"drawings"."id"`,
+  )
 })
 
 test("an image that would take the drawing over its cap is not stored", async () => {

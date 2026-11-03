@@ -3,7 +3,7 @@
 import { randomUUID } from "node:crypto"
 import { and, eq, sql } from "drizzle-orm"
 import type { Db } from "@/db"
-import { drawingFiles } from "@/db/schema"
+import { drawingFiles, drawings } from "@/db/schema"
 import { bytesToDataUrl, dataUrlToBytes } from "@/features/drawings/file-bytes"
 import {
   MAX_DRAWING_IMAGE_BYTES,
@@ -29,7 +29,7 @@ export async function storedImageBytes(
 
 /**
  * First write per fileId wins. The id hashes the pre-downscale file, so bytes
- * can't be verified against it. A concurrent duplicate row is harmless.
+ * can't be verified against it.
  * `full`: the image would take the drawing over `MAX_DRAWING_IMAGE_BYTES`.
  */
 export async function saveRoomFile(
@@ -38,31 +38,40 @@ export async function saveRoomFile(
   file: RoomFile,
   now: Date = new Date(),
 ): Promise<"stored" | "full"> {
-  const [existing] = await db
-    .select({ fileId: drawingFiles.fileId })
-    .from(drawingFiles)
-    .where(
-      and(
-        eq(drawingFiles.drawingId, drawingId),
-        eq(drawingFiles.fileId, file.fileId),
-      ),
-    )
-  if (existing) return "stored"
-
-  // Not atomic: parallel uploads can pass together; the rate limit bounds that.
   const bytes = dataUrlToBytes(file.dataUrl)
-  const stored = await storedImageBytes(db, drawingId)
-  if (stored + bytes.length > MAX_DRAWING_IMAGE_BYTES) return "full"
+  return db.transaction(async (tx) => {
+    // The drawing's row lock makes parallel uploads check the cap one at a
+    // time. writeDrawingScene's UPDATE takes the same lock.
+    await tx
+      .select({ id: drawings.id })
+      .from(drawings)
+      .where(eq(drawings.id, drawingId))
+      .for("update")
 
-  await db.insert(drawingFiles).values({
-    id: randomUUID(),
-    drawingId,
-    fileId: file.fileId,
-    mimeType: file.mimeType,
-    bytes,
-    createdAt: now,
+    const [existing] = await tx
+      .select({ fileId: drawingFiles.fileId })
+      .from(drawingFiles)
+      .where(
+        and(
+          eq(drawingFiles.drawingId, drawingId),
+          eq(drawingFiles.fileId, file.fileId),
+        ),
+      )
+    if (existing) return "stored"
+
+    const stored = await storedImageBytes(tx, drawingId)
+    if (stored + bytes.length > MAX_DRAWING_IMAGE_BYTES) return "full"
+
+    await tx.insert(drawingFiles).values({
+      id: randomUUID(),
+      drawingId,
+      fileId: file.fileId,
+      mimeType: file.mimeType,
+      bytes,
+      createdAt: now,
+    })
+    return "stored"
   })
-  return "stored"
 }
 
 /** Scoped by drawing, so a token can't read another drawing's images. */

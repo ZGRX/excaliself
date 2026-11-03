@@ -289,18 +289,27 @@ const bytea = customType<{ data: Buffer; driverData: Uint8Array }>({
     Buffer.from(value.buffer, value.byteOffset, value.byteLength),
 })
 
-export const drawingFiles = pgTable("drawing_files", {
-  id: text("id").primaryKey(),
-  drawingId: text("drawingId")
-    .notNull()
-    .references(() => drawings.id, { onDelete: "cascade" }),
-  fileId: text("fileId").notNull(),
-  mimeType: text("mimeType").notNull(),
-  bytes: bytea("bytes").notNull(),
-  createdAt: timestamp("createdAt")
-    .notNull()
-    .$defaultFn(() => new Date()),
-})
+export const drawingFiles = pgTable(
+  "drawing_files",
+  {
+    id: text("id").primaryKey(),
+    drawingId: text("drawingId")
+      .notNull()
+      .references(() => drawings.id, { onDelete: "cascade" }),
+    fileId: text("fileId").notNull(),
+    mimeType: text("mimeType").notNull(),
+    bytes: bytea("bytes").notNull(),
+    createdAt: timestamp("createdAt")
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => ({
+    oneRowPerFile: uniqueIndex("drawing_files_one_row_per_file").on(
+      table.drawingId,
+      table.fileId,
+    ),
+  }),
+)
 
 // The team library: the Library panel's items, one set for the instance.
 // `item` is Excalidraw's LibraryItem as is; newest (highest seq) first.
