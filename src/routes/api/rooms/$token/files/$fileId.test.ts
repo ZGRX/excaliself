@@ -30,7 +30,7 @@ const admits = (roomId = "drawing-1") =>
   resolveRoomForToken.mockResolvedValue({
     status: "ok",
     roomId,
-    identity: { userId: null, displayName: null },
+    identity: { userId: null, sessionId: null, displayName: null },
   })
 
 const refuses = () =>

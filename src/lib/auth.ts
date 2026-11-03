@@ -12,7 +12,7 @@ import {
   ssoPlugins,
 } from "@/features/auth/sso"
 import { rooms } from "@/features/collab/room-registry"
-import { evictUser } from "@/features/collab/room-session"
+import { evictSessions, evictUser } from "@/features/collab/room-session"
 
 type DynamicBaseURL = Exclude<NonNullable<BetterAuthOptions["baseURL"]>, string>
 
@@ -50,6 +50,9 @@ export const auth = betterAuth({
     enabled: true,
   },
   socialProviders,
+  // SSO is redirect-only. These hand a session holder the IdP's tokens,
+  // which outlive revoking that session.
+  disabledPaths: ["/get-access-token", "/refresh-token", "/account-info"],
   account: {
     accountLinking: {
       // Password members never verify their email (no SMTP). The provider's
@@ -82,6 +85,13 @@ export const auth = betterAuth({
           // Open sockets checked the session only when they joined.
           await evictUser(rooms, account.userId)
         },
+      },
+    },
+    session: {
+      delete: {
+        // Every session Better Auth deletes: sign-out, revoke, password
+        // change. Open sockets checked the session only when they joined.
+        after: (session) => evictSessions(rooms, new Set([session.id])),
       },
     },
   },

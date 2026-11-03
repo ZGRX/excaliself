@@ -84,9 +84,10 @@ const emptyRegistry = (load?: SceneLoader) =>
 
 const member = (displayName: string) => ({
   userId: `u:${displayName}`,
+  sessionId: `s:${displayName}`,
   displayName,
 })
-const guest = { userId: null, displayName: null }
+const guest = { userId: null, sessionId: null, displayName: null }
 
 const rosterOf = (message: ServerMessage | undefined) =>
   message && "participants" in message.payload

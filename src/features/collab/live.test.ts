@@ -36,10 +36,12 @@ const liveDrawingsFor = (registry: RoomRegistry, userId: string) =>
 
 const member = (userId: string, displayName: string) => ({
   userId,
+  sessionId: `s:${userId}`,
   displayName,
 })
 const guest = (displayName: string) => ({
   userId: null,
+  sessionId: null,
   displayName,
 })
 

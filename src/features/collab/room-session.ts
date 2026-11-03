@@ -31,9 +31,10 @@ export interface RoomPeer {
   close(code: number, reason: string): void
 }
 
-/** From the upgrade. `userId` is null for guests. */
+/** From the upgrade. `userId` and `sessionId` are null for guests. */
 export type ParticipantIdentity = {
   userId: string | null
+  sessionId: string | null
   displayName: string | null
 }
 
@@ -52,6 +53,8 @@ export type Seat = {
   peer: RoomPeer
   /** Kept off `participant`, which goes on the wire. */
   userId: string | null
+  /** The session the socket joined with, so revoking it ends the seat. */
+  sessionId: string | null
   /** Last frame time, for the ghost sweep. */
   lastSeenAt: number
 }
@@ -343,6 +346,7 @@ export async function joinRoom(
     participant,
     peer,
     userId: identity.userId,
+    sessionId: identity.sessionId,
     lastSeenAt: registry.now(),
   })
 
@@ -691,11 +695,32 @@ export async function evictUser(
   )
 }
 
-/** Drops the picked seats, settles the Room, then hangs up on them as dead. */
+/**
+ * Sessions ended: closes the seats that joined with them. They rejoin, and
+ * the join checks the session again.
+ */
+export async function evictSessions(
+  registry: RoomRegistry,
+  sessionIds: ReadonlySet<string>,
+): Promise<void> {
+  await Promise.all(
+    [...registry.rooms.values()].map((room) =>
+      evictSeats(
+        registry,
+        room,
+        (seat) => seat.sessionId !== null && sessionIds.has(seat.sessionId),
+        closeToRejoin,
+      ),
+    ),
+  )
+}
+
+/** Drops the picked seats, settles the Room, then hangs up on them. */
 async function evictSeats(
   registry: RoomRegistry,
   room: Room,
   pick: (seat: Seat) => boolean,
+  hangUp: (peer: RoomPeer) => void = closeAsDead,
 ) {
   const evicted: RoomPeer[] = []
   for (const [connectionId, seat] of [...room.seats]) {
@@ -706,5 +731,5 @@ async function evictSeats(
   if (evicted.length === 0) return
 
   await settleAfterForget(registry, room)
-  for (const peer of evicted) closeAsDead(peer)
+  for (const peer of evicted) hangUp(peer)
 }

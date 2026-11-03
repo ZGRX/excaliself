@@ -31,6 +31,7 @@ export async function resolveRoomForToken(
     roomId: share.drawing.id,
     identity: {
       userId: user?.id ?? null,
+      sessionId: session?.session.id ?? null,
       displayName: user ? memberDisplayName(user) : null,
     },
   }

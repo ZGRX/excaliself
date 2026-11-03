@@ -47,6 +47,10 @@ export const socialProviders: BetterAuthOptions["socialProviders"] = {
       clientId: microsoft.MICROSOFT_CLIENT_ID,
       clientSecret: microsoft.MICROSOFT_CLIENT_SECRET,
       tenantId: microsoft.MICROSOFT_TENANT_ID,
+      // The default adds offline_access. Nothing uses a refresh token, so
+      // none is asked for or stored. User.Read fetches the profile photo.
+      disableDefaultScope: true,
+      scope: ["openid", "profile", "email", "User.Read"],
     },
   }),
 }

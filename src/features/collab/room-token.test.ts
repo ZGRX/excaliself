@@ -21,12 +21,16 @@ beforeEach(() => {
 })
 
 test("a member joins the drawing's room under their session name", async () => {
-  getSession.mockResolvedValue({ user: ada })
+  getSession.mockResolvedValue({ user: ada, session: { id: "session-ada" } })
 
   expect(await resolve()).toEqual({
     status: "ok",
     roomId: "drawing-1",
-    identity: { userId: "user-ada", displayName: "Ada Lovelace" },
+    identity: {
+      userId: "user-ada",
+      sessionId: "session-ada",
+      displayName: "Ada Lovelace",
+    },
   })
 })
 
@@ -34,7 +38,7 @@ test("a guest joins an anyone link with no identity of its own", async () => {
   expect(await resolve()).toEqual({
     status: "ok",
     roomId: "drawing-1",
-    identity: { userId: null, displayName: null },
+    identity: { userId: null, sessionId: null, displayName: null },
   })
 })
 

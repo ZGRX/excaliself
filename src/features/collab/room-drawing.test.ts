@@ -36,7 +36,7 @@ const REFUSED = { status: "refused" }
 
 beforeEach(() => {
   vi.clearAllMocks()
-  getSession.mockResolvedValue({ user: ada })
+  getSession.mockResolvedValue({ user: ada, session: { id: "session-ada" } })
 })
 
 test("a member joins a Team drawing's room under their session name", async () => {
@@ -44,7 +44,11 @@ test("a member joins a Team drawing's room under their session name", async () =
     status: "ok",
     // The token entry's Room id too, so guests on a link land here.
     roomId: "drawing-1",
-    identity: { userId: "user-ada", displayName: "Ada Lovelace" },
+    identity: {
+      userId: "user-ada",
+      sessionId: "session-ada",
+      displayName: "Ada Lovelace",
+    },
   })
 })
 

@@ -19,8 +19,8 @@ export async function resolveRoomForDrawing(
 ): Promise<RoomJoin> {
   // Session first, so a visitor with none costs the db nothing.
   const session = await auth.api.getSession({ headers })
-  const user = session?.user
-  if (!user || !drawingId) return { status: "refused" }
+  if (!session || !drawingId) return { status: "refused" }
+  const { user } = session
 
   const [drawing] = await db
     .select({
@@ -43,6 +43,10 @@ export async function resolveRoomForDrawing(
     status: "ok",
     // The same Room id as the token entry, so members and guests meet.
     roomId: drawing.id,
-    identity: { userId: user.id, displayName: memberDisplayName(user) },
+    identity: {
+      userId: user.id,
+      sessionId: session.session.id,
+      displayName: memberDisplayName(user),
+    },
   }
 }

@@ -20,7 +20,7 @@ const socket = (join: RoomJoin, limitFailures: boolean) =>
 const admitted: RoomJoin = {
   status: "ok",
   roomId: "drawing-1",
-  identity: { userId: "user-1", displayName: "Ada" },
+  identity: { userId: "user-1", sessionId: "session-1", displayName: "Ada" },
 }
 const refused: RoomJoin = { status: "refused" }
 

@@ -98,8 +98,8 @@ https://your-instance.example.com/reset-password?token=<token>
 ```
 
 Set a new password. You'll be signed in immediately; every other session for
-that account is revoked, and the token is single-use (it also expires after
-24 hours).
+that account is revoked, and drawings open in those sessions stop getting live
+edits. The token is single-use (it also expires after 24 hours).
 
 ## Notes
 

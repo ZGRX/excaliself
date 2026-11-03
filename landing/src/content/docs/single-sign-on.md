@@ -48,7 +48,7 @@ some of them missing. PR previews ignore these settings.
 |---|---|
 | `SSO_ALLOWED_DOMAINS` | Comma-separated email domains whose people join on their first sign-in, e.g. `acme.com,acme.de` |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | OAuth client of type **Web application** from Google Cloud Console (**APIs & Services → Credentials**) |
-| `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`, `MICROSOFT_TENANT_ID` | App registration in Microsoft Entra admin center, with a **Web** redirect URI. The tenant ID is the **Directory (tenant) ID**. `common`, `organizations` and `consumers` are refused |
+| `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`, `MICROSOFT_TENANT_ID` | App registration in Microsoft Entra admin center, with a **Web** redirect URI. The tenant ID is the **Directory (tenant) ID**. `common`, `organizations` and `consumers` are refused. The app asks for `openid`, `profile`, `email` and `User.Read` (for the profile photo), not `offline_access` |
 | `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET` | Confidential client in your provider. The issuer is the URL that serves `/.well-known/openid-configuration` |
 | `OIDC_NAME` | Button label, e.g. `Okta` (default `SSO`) |
 
