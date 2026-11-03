@@ -26,8 +26,22 @@ export const serverFnBodyLimit = createMiddleware().server(
   },
 )
 
+/**
+ * Pages and server fns can carry the member's data, so a shared cache (such as
+ * a CDN that caches `.css` paths) must not store them. A route that sets its
+ * own Cache-Control keeps it.
+ */
+export const noStoreByDefault = createMiddleware().server(async ({ next }) => {
+  const result = await next()
+  const { headers } = result.response
+  if (!headers.has("cache-control"))
+    headers.set("cache-control", "private, no-store")
+  return result
+})
+
 export const startInstance = createStart(() => ({
   requestMiddleware: [
+    noStoreByDefault,
     serverFnBodyLimit,
     // Start's default, which a start instance replaces.
     createCsrfMiddleware({ filter: (ctx) => ctx.handlerType === "serverFn" }),

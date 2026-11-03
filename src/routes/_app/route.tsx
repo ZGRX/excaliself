@@ -19,9 +19,13 @@ import { MoveToTeamProvider } from "./-components/MoveToTeamDialog"
 import { SidebarReopenButton } from "./-components/SidebarReopenButton"
 import { DrawSidebar } from "./-components/sidebar"
 
+// Only the user fields the shell reads. The session row holds the token.
 const getSession = createServerFn({ method: "GET" })
   .middleware([authMiddleware])
-  .handler(async ({ context }) => context.session)
+  .handler(async ({ context }) => {
+    const { id, email, createdAt } = context.session.user
+    return { user: { id, email, createdAt } }
+  })
 
 export const Route = createFileRoute("/_app")({
   server: {
