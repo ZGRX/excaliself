@@ -409,3 +409,21 @@ test("the owner's first SSO sign-in ends other SSO links to the account", async 
   expect((await sessionOf(owner))?.user.id).toBe(user.id)
   expect(await sessionOf(again)).toBeNull()
 })
+
+// Generic OIDC would take the identity from the request's access token.
+test.each(["/sign-in/social", "/link-social"])(
+  "%s refuses an ID token",
+  async (path) => {
+    const res = await auth.handler(
+      new Request(`http://127.0.0.1:3000/api/auth${path}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          provider: "oidc",
+          idToken: { token: "id-token", accessToken: "access-token" },
+        }),
+      }),
+    )
+    expect(res.status).toBe(403)
+  },
+)

@@ -109,6 +109,16 @@ export const auth = betterAuth({
           message: "Sign-up is invite-only",
         })
       }
+      // The app signs in with the redirect flow only. The ID token branch
+      // lets generic OIDC take the identity from a caller's access token.
+      if (
+        (ctx.path === "/sign-in/social" || ctx.path === "/link-social") &&
+        ctx.body?.idToken
+      ) {
+        throw new APIError("FORBIDDEN", {
+          message: "ID token sign-in is disabled",
+        })
+      }
     }),
   },
   // No cookie cache: every request reads the session row, so a deleted or
