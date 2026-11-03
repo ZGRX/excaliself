@@ -23,10 +23,7 @@ import {
   receiveFromPeer,
 } from "@/features/collab/room-session"
 import type { RoomJoin } from "@/features/collab/room-token"
-import {
-  recordFailedTokenLookup,
-  tokenLookupsBlocked,
-} from "@/features/shares/token-rate-limit"
+import { spendFailedTokenLookup } from "@/features/shares/token-rate-limit"
 import { socketIpOf } from "@/lib/client-ip"
 import { fromOwnOrigin } from "@/lib/same-origin"
 import {
@@ -70,19 +67,19 @@ export const defineRoomSocket = (
       // Refused like a dead link (see below), and not a token guess.
       if (!fromOwnOrigin(request)) return
 
-      const visitor = {
-        headers: request.headers,
-        socketIp: socketIpOf(request),
-      }
-      if (limitFailures && tokenLookupsBlocked(visitor))
-        throw new Response("Too Many Requests", { status: 429 })
-
       // Runs on every (re)connect, so link changes apply on the next join.
       const join = await resolve(request)
-      // Accept and close in `open`: a refused handshake is an opaque 1006 the
-      // client can't tell from an outage, so it would retry forever.
       if (join.status !== "ok") {
-        if (limitFailures) recordFailedTokenLookup(visitor)
+        if (
+          limitFailures &&
+          !spendFailedTokenLookup({
+            headers: request.headers,
+            socketIp: socketIpOf(request),
+          })
+        )
+          throw new Response("Too Many Requests", { status: 429 })
+        // Accept and close in `open`: a refused handshake is an opaque 1006
+        // the client can't tell from an outage, so it would retry forever.
         return
       }
 

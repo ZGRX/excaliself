@@ -2,8 +2,7 @@ import { expect, test, vi } from "vitest"
 import type { RateLimiter } from "@/lib/rate-limit"
 import {
   FAILED_TOKEN_LOOKUPS_PER_MINUTE,
-  recordFailedTokenLookup,
-  tokenLookupsBlocked,
+  spendFailedTokenLookup,
 } from "./token-rate-limit"
 
 // The limiter is process-wide on purpose (one budget per IP across both guest
@@ -12,25 +11,15 @@ const from = (ip: string) => ({
   headers: new Headers({ "x-forwarded-for": ip }),
 })
 
-const fail = (visitor: ReturnType<typeof from>, times: number, now = 0) => {
-  for (let i = 0; i < times; i++) recordFailedTokenLookup(visitor, now)
-}
+// Spends `times` failures and reports whether each one was within budget.
+const fail = (visitor: ReturnType<typeof from>, times: number, now = 0) =>
+  Array.from({ length: times }, () => spendFailedTokenLookup(visitor, now))
 
-test("lookups with a live link never spend the budget", () => {
-  const office = from("203.0.113.10")
-
-  for (let i = 0; i < FAILED_TOKEN_LOOKUPS_PER_MINUTE * 10; i++) {
-    expect(tokenLookupsBlocked(office, 0)).toBe(false)
-  }
-})
-
-test("blocks lookups once a minute's worth of them failed", () => {
+test("refuses failures once a minute's worth of them were spent", () => {
   const guesser = from("203.0.113.11")
 
-  fail(guesser, FAILED_TOKEN_LOOKUPS_PER_MINUTE - 1)
-  expect(tokenLookupsBlocked(guesser, 0)).toBe(false)
-  fail(guesser, 1)
-  expect(tokenLookupsBlocked(guesser, 0)).toBe(true)
+  expect(fail(guesser, FAILED_TOKEN_LOOKUPS_PER_MINUTE)).not.toContain(false)
+  expect(spendFailedTokenLookup(guesser, 0)).toBe(false)
 })
 
 test("the share page and the websocket upgrade share one budget", () => {
@@ -39,22 +28,22 @@ test("the share page and the websocket upgrade share one budget", () => {
   // has forwarded headers, the upgrade may only have the socket address.
   fail(from(ip), FAILED_TOKEN_LOOKUPS_PER_MINUTE)
 
-  expect(tokenLookupsBlocked({ headers: new Headers(), socketIp: ip }, 0)).toBe(
-    true,
-  )
+  expect(
+    spendFailedTokenLookup({ headers: new Headers(), socketIp: ip }, 0),
+  ).toBe(false)
 })
 
 test("one guessing visitor does not lock anyone else out", () => {
-  fail(from("203.0.113.13"), FAILED_TOKEN_LOOKUPS_PER_MINUTE)
+  fail(from("203.0.113.13"), FAILED_TOKEN_LOOKUPS_PER_MINUTE + 1)
 
-  expect(tokenLookupsBlocked(from("203.0.113.14"), 0)).toBe(false)
+  expect(spendFailedTokenLookup(from("203.0.113.14"), 0)).toBe(true)
 })
 
 test("the budget refills the next minute", () => {
   const guesser = from("203.0.113.15")
-  fail(guesser, FAILED_TOKEN_LOOKUPS_PER_MINUTE)
+  fail(guesser, FAILED_TOKEN_LOOKUPS_PER_MINUTE + 1)
 
-  expect(tokenLookupsBlocked(guesser, 60_000)).toBe(false)
+  expect(spendFailedTokenLookup(guesser, 60_000)).toBe(true)
 })
 
 // The websocket route and the server functions are separate bundles in the
@@ -74,7 +63,7 @@ test("a second evaluation of the module adopts the limiter already in the proces
   try {
     vi.resetModules()
     const reloaded = await import("./token-rate-limit")
-    reloaded.recordFailedTokenLookup(from("203.0.113.20"), 0)
+    reloaded.spendFailedTokenLookup(from("203.0.113.20"), 0)
     expect(stub.allow).toHaveBeenCalledWith("203.0.113.20", 0)
   } finally {
     host[key] = pinned

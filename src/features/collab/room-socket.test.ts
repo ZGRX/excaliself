@@ -1,9 +1,6 @@
 import { expect, test, vi } from "vitest"
 import { INBOUND_FRAME_BURST } from "@/features/collab/inbound-budget"
-import {
-  FAILED_TOKEN_LOOKUPS_PER_MINUTE,
-  recordFailedTokenLookup,
-} from "@/features/shares/token-rate-limit"
+import { FAILED_TOKEN_LOOKUPS_PER_MINUTE } from "@/features/shares/token-rate-limit"
 import type { RoomJoin } from "./room-token"
 
 // Hand back the hooks themselves, so a test can call `upgrade` directly.
@@ -46,33 +43,29 @@ const knock = async (entry: Upgrade, ip: string, times: number) => {
   for (let i = 0; i < times; i++) await entry.upgrade(from(ip))
 }
 
-test("refused by-id joins never lock out share links from the same IP", async () => {
+test("refused by-id joins never spend the token budget", async () => {
   const ip = "203.0.113.30"
   await knock(socket(refused, false), ip, FAILED_TOKEN_LOOKUPS_PER_MINUTE * 2)
+
+  await expect(socket(refused, true).upgrade(from(ip))).resolves.toBe(undefined)
+})
+
+test("refused token joins spend the budget, then get 429", async () => {
+  const ip = "203.0.113.32"
+  await knock(socket(refused, true), ip, FAILED_TOKEN_LOOKUPS_PER_MINUTE)
+
+  await expect(socket(refused, true).upgrade(from(ip))).rejects.toMatchObject({
+    status: 429,
+  })
+})
+
+test("a live token still joins from an IP that spent its budget", async () => {
+  const ip = "203.0.113.33"
+  await knock(socket(refused, true), ip, FAILED_TOKEN_LOOKUPS_PER_MINUTE)
 
   await expect(socket(admitted, true).upgrade(from(ip))).resolves.toEqual(
     expect.objectContaining({ namespace: "room:drawing-1" }),
   )
-})
-
-test("a by-id join still works while its IP is out of token budget", async () => {
-  const ip = "203.0.113.31"
-  const visitor = { headers: from(ip).headers }
-  for (let i = 0; i < FAILED_TOKEN_LOOKUPS_PER_MINUTE; i++)
-    recordFailedTokenLookup(visitor)
-
-  await expect(socket(admitted, false).upgrade(from(ip))).resolves.toEqual(
-    expect.objectContaining({ namespace: "room:drawing-1" }),
-  )
-})
-
-test("refused token joins still spend the budget", async () => {
-  const ip = "203.0.113.32"
-  await knock(socket(refused, true), ip, FAILED_TOKEN_LOOKUPS_PER_MINUTE)
-
-  await expect(socket(admitted, true).upgrade(from(ip))).rejects.toMatchObject({
-    status: 429,
-  })
 })
 
 test("a sibling-subdomain page is refused, so open closes it as a dead link", async () => {
