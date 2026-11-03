@@ -30,3 +30,11 @@ test("control-character smuggling falls back to /draw", () => {
   expect(resolveRedirect("/\n/evil.example")).toBe("/draw")
   expect(resolveRedirect("/%09/x")).toBe("/%09/x") // percent-encoded is inert
 })
+
+test("dot segments that collapse into a protocol-relative path fall back to /draw", () => {
+  // The URL parser removes "." and ".." after it picks the host, so these
+  // normalize to the pathname "//evil.example".
+  expect(resolveRedirect("/.//evil.example")).toBe("/draw")
+  expect(resolveRedirect("/a/..//evil.example")).toBe("/draw")
+  expect(resolveRedirect("/%2e//evil.example")).toBe("/draw")
+})

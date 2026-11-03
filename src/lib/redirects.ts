@@ -18,5 +18,9 @@ export function resolveRedirect(value: string | undefined): string {
   // A value that escapes the probe origin (e.g. "//evil.example") is
   // not a relative path.
   if (url.origin !== PROBE_ORIGIN) return FALLBACK
+  // Dot segments are removed after the host is picked, so "/.//evil"
+  // keeps the probe origin but normalizes to "//evil". The parser turns
+  // backslashes into slashes, so this check also covers "/\".
+  if (url.pathname.startsWith("//")) return FALLBACK
   return url.pathname + url.search + url.hash
 }
