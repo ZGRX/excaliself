@@ -43,6 +43,31 @@ vi.mock("@/features/collab/room-registry", async () => {
   }
 })
 vi.stubEnv("BETTER_AUTH_SECRET", "test-secret-test-secret-test-secret-00")
+// An OIDC provider with no network: each callback gets the profile set here.
+const idp = vi.hoisted(() => ({
+  profile: { id: "", email: "", emailVerified: true, name: "" },
+}))
+vi.mock("@/features/auth/sso", async (importOriginal) => {
+  const { genericOAuth } = await import("better-auth/plugins/generic-oauth")
+  return {
+    ...(await importOriginal<typeof import("@/features/auth/sso")>()),
+    mayJoinWithSso: () => false,
+    ssoPlugins: [
+      genericOAuth({
+        config: [
+          {
+            providerId: "oidc",
+            clientId: "client",
+            clientSecret: "secret",
+            authorizationUrl: "http://idp.test/authorize",
+            getToken: async () => ({ accessToken: "token" }),
+            getUserInfo: async () => idp.profile,
+          },
+        ],
+      }),
+    ],
+  }
+})
 
 const { auth } = await import("./auth")
 const { accessTokens } = await import("@/db/schema")
@@ -82,7 +107,7 @@ test("linking SSO to a password account ends its password, sessions and tokens",
     store[table].filter((row) => row.userId === user.id)
   expect(rows("session")).toHaveLength(1)
 
-  const link = auth.options.databaseHooks?.account?.create?.before
+  const link = auth.options.databaseHooks?.account?.create?.after
   const now = new Date()
   await link?.(
     {
@@ -300,4 +325,86 @@ test("Microsoft sign-in asks for no refresh token", async () => {
   expect(new URL(String(url)).searchParams.get("scope")).toBe(
     "openid profile email User.Read",
   )
+})
+
+const origin = "http://127.0.0.1:3000"
+const cookiesOf = (response: Response) =>
+  response.headers
+    .getSetCookie()
+    .map((setCookie) => setCookie.split(";")[0])
+    .join("; ")
+
+/** Starts an OIDC flow at path; the result finishes it as the given identity. */
+async function startOidc(
+  path: "/sign-in/social" | "/link-social",
+  cookie = "",
+) {
+  const start = await auth.handler(
+    new Request(`${origin}/api/auth${path}`, {
+      method: "POST",
+      headers: { origin, cookie, "content-type": "application/json" },
+      body: JSON.stringify({ provider: "oidc", callbackURL: "/" }),
+    }),
+  )
+  const { url } = (await start.json()) as { url: string }
+  const state = new URL(url).searchParams.get("state")
+  return (id: string, email: string) => {
+    idp.profile = { id, email, emailVerified: true, name: "" }
+    return auth.handler(
+      new Request(`${origin}/api/auth/callback/oidc?code=c&state=${state}`, {
+        headers: { cookie: `${cookie}; ${cookiesOf(start)}` },
+      }),
+    )
+  }
+}
+const providersOf = (userId: string) =>
+  store.account
+    .filter((row) => row.userId === userId)
+    .map((row) => `${row.providerId}:${row.accountId}`)
+
+test("a link begun before an email change is refused", async () => {
+  const signUp = await auth.api.signUpEmail({
+    body: { email: "m@corp.test", password: "password-123", name: "M" },
+    returnHeaders: true,
+  })
+  const userId = signUp.response.user.id
+  const cookie = cookiesOf(new Response(null, { headers: signUp.headers }))
+  const finish = await startOidc("/link-social", cookie)
+
+  // As changeEmail does. The link state still holds m@corp.test.
+  const user = store.user.find((row) => row.id === userId)
+  if (user) user.email = "v@corp.test"
+  const callback = await finish("m-sub", "m@corp.test")
+
+  expect(callback.headers.get("location")).toContain(
+    "error=email_does_not_match",
+  )
+  expect(providersOf(userId)).toEqual([`credential:${userId}`])
+})
+
+test("the owner's first SSO sign-in ends other SSO links to the account", async () => {
+  const { user } = await auth.api.signUpEmail({
+    body: { email: "n@corp.test", password: "password-123", name: "N" },
+  })
+  await (await startOidc("/sign-in/social"))("n-sub", "n@corp.test")
+  // N gets a password back from an admin reset, then changes email.
+  const row = store.user.find((u) => u.id === user.id)
+  if (row) row.email = "w@corp.test"
+
+  const owner = await (await startOidc("/sign-in/social"))(
+    "w-sub",
+    "w@corp.test",
+  )
+  const again = await (await startOidc("/sign-in/social"))(
+    "n-sub",
+    "n@corp.test",
+  )
+
+  const sessionOf = (response: Response) =>
+    auth.api.getSession({
+      headers: new Headers({ cookie: cookiesOf(response) }),
+    })
+  expect(providersOf(user.id)).toEqual(["oidc:w-sub"])
+  expect((await sessionOf(owner))?.user.id).toBe(user.id)
+  expect(await sessionOf(again)).toBeNull()
 })

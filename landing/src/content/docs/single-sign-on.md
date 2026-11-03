@@ -11,11 +11,12 @@ Email and password sign-in and invites keep working.
 ## Who gets in
 
 - **Existing members** sign in with any provider whose email matches their
-  account. The first SSO sign-in links it, removes the account's password,
-  signs out its other sessions, and revokes its
-  [access tokens](/docs/mcp/#access): nobody verified the email behind that
-  password. An admin can give the password back with a
-  [reset link](/docs/members/#reset-a-password).
+  account. The first SSO sign-in links it, removes the account's password
+  and any other SSO link, signs out its other sessions, and revokes its
+  [access tokens](/docs/mcp/#access): nobody verified the email behind those.
+  An admin can give the password back with a
+  [reset link](/docs/members/#reset-a-password). A first sign-in with a
+  second provider does the same to the first provider's link.
 - **New people** get an account on their first sign-in only if their email
   domain is in `SSO_ALLOWED_DOMAINS`. Everyone else needs an
   [invite link](/docs/members/#invite-someone). Without `SSO_ALLOWED_DOMAINS`,
