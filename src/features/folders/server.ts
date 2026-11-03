@@ -8,7 +8,10 @@ import { db } from "@/db"
 import { drawings, folders, spaces } from "@/db/schema"
 import { userDisplayName } from "@/features/account/display-name"
 import { endTrashedRooms } from "@/features/collab/room-registry"
-import { folderColumns } from "@/features/drawings/list-columns"
+import {
+  folderColumns,
+  MAX_NAME_LENGTH,
+} from "@/features/drawings/list-columns"
 import { accessibleTo } from "@/features/spaces/access"
 import { restoreFolderUnit } from "@/features/trash/restore"
 import { authMiddleware } from "@/middleware/auth"
@@ -28,7 +31,7 @@ export const createFolder = createServerFn({ method: "POST" })
   .middleware([authMiddleware, listsChangedMiddleware])
   .validator(
     z.object({
-      name: z.string().min(1),
+      name: z.string().min(1).max(MAX_NAME_LENGTH),
       parentId: z.string().nullable().optional(),
       // Ignored inside a parent folder: the folder takes the parent's space.
       space: z.enum(spaces).default("private"),
@@ -66,7 +69,7 @@ export const updateFolder = createServerFn({ method: "POST" })
   .validator(
     z.object({
       id: z.string(),
-      name: z.string().min(1).optional(),
+      name: z.string().min(1).max(MAX_NAME_LENGTH).optional(),
       parentId: z.string().nullable().optional(),
     }),
   )

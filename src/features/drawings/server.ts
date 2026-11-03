@@ -16,7 +16,7 @@ import { listsChangedMiddleware } from "@/middleware/lists-changed"
 import { insertDrawing } from "./create"
 import { bytesToDataUrl } from "./file-bytes"
 import { listDrawings } from "./list"
-import { drawingColumns } from "./list-columns"
+import { drawingColumns, MAX_NAME_LENGTH } from "./list-columns"
 import { importDrawing, sceneContentSchema } from "./scene-import"
 import { writeDrawingScene } from "./scene-write"
 
@@ -78,7 +78,7 @@ export const createDrawing = createServerFn({ method: "POST" })
   .middleware([authMiddleware, listsChangedMiddleware])
   .validator(
     z.object({
-      name: z.string().min(1).optional(),
+      name: z.string().min(1).max(MAX_NAME_LENGTH).optional(),
       folderId: z.string().nullable().optional(),
       // Ignored inside a folder: the drawing takes the folder's space.
       space: z.enum(spaces).default("private"),
@@ -99,7 +99,7 @@ export const importDrawingFile = createServerFn({ method: "POST" })
   .middleware([authMiddleware, listsChangedMiddleware])
   .validator(
     z.object({
-      name: z.string(),
+      name: z.string().max(MAX_NAME_LENGTH),
       folderId: z.string().nullable(),
       // Ignored inside a folder: the drawing takes the folder's space.
       space: z.enum(spaces),
@@ -116,7 +116,7 @@ export const updateDrawing = createServerFn({ method: "POST" })
     z.object({
       id: z.string(),
       updateData: z.object({
-        name: z.string().optional(),
+        name: z.string().max(MAX_NAME_LENGTH).optional(),
         folderId: z.string().nullable().optional(),
       }),
     }),

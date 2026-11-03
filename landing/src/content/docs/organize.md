@@ -7,12 +7,14 @@ description: Folders, stars, search, the command palette, and the trash.
 
 Nest folders and drag drawings between them in the sidebar. Starred drawings
 appear in the sidebar. **Home** shows your recent drawings, ordered by when they
-were last edited. **All drawings** shows them all.
+were last edited. **All drawings** shows them all. Drawing and folder names
+can be up to 1,000 characters.
 
 ## Search
 
 Search finds drawings by title and by the text inside them. It is in the toolbar
-on **All drawings** and on folder pages, and in the command palette.
+on **All drawings** and on folder pages, and in the command palette. In a
+drawing with a lot of text, search reads only the first 10,000 characters.
 
 ## Command palette
 
