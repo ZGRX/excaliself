@@ -12,3 +12,10 @@ drawing, Private or Team. Every member sees and edits the same items.
 - Libraries from [libraries.excalidraw.com](https://libraries.excalidraw.com)
   install into it.
 - Guests on a share link cannot see or change it.
+
+## Limits
+
+- One item can be up to 1 MB.
+- The whole library can be up to 10 MB. When it is full, the editor refuses
+  new items and says why. Remove items to make room.
+- One member can save up to 60 library changes a minute.

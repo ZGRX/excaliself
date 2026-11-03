@@ -3,7 +3,11 @@ import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useMemo } from "react"
 import { toast } from "sonner"
-import { libraryQueryOptions } from "./queries"
+import {
+  LibraryChangeRefused,
+  libraryQueryOptions,
+  readLibraryResponse,
+} from "./queries"
 import { changeLibrary } from "./server"
 import { createLibrarySync } from "./sync"
 
@@ -19,15 +23,18 @@ export function useTeamLibrary(excalidrawAPI: ExcalidrawImperativeAPI | null) {
     () =>
       excalidrawAPI &&
       createLibrarySync({
-        save: (change) => changeLibrary({ data: change }),
+        save: async (change) =>
+          readLibraryResponse(await changeLibrary({ data: change })),
         load: () =>
           queryClient.fetchQuery({ ...libraryQueryOptions(), staleTime: 0 }),
         show: (libraryItems) => {
           void excalidrawAPI.updateLibrary({ libraryItems })
         },
-        onSaveError: () =>
+        onSaveError: (error) =>
           toast.error("Couldn't save the library change", {
             id: "library-save-error",
+            description:
+              error instanceof LibraryChangeRefused ? error.message : undefined,
           }),
       }),
     [excalidrawAPI, queryClient],

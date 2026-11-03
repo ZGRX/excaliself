@@ -37,7 +37,7 @@ let answerLoad: (items: LibraryItem[]) => void = () => {}
 vi.mock("./server", () => ({
   getLibrary: () =>
     new Promise((resolve) => {
-      answerLoad = resolve
+      answerLoad = (items) => resolve(Response.json(items))
     }),
   changeLibrary: vi.fn(),
 }))
