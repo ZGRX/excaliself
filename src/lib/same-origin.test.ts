@@ -58,12 +58,17 @@ describe("fromOwnOrigin", () => {
     ).toBe(false)
   })
 
-  it("reads a socket's forwarded ws/wss proto as its page's http/https", () => {
+  it("compares hosts only: a proxy that ends TLS may forward http or ws", () => {
     const socket = (proto: string, origin: string) =>
       request({ host: "draw.example.com", "x-forwarded-proto": proto, origin })
-    expect(fromOwnOrigin(socket("wss", "https://draw.example.com"))).toBe(true)
-    expect(fromOwnOrigin(socket("ws", "http://draw.example.com"))).toBe(true)
-    expect(fromOwnOrigin(socket("ws", "https://draw.example.com"))).toBe(false)
+    for (const proto of ["https", "http", "wss", "ws"])
+      expect(fromOwnOrigin(socket(proto, "https://draw.example.com"))).toBe(
+        true,
+      )
+    expect(fromOwnOrigin(socket("https", "https://evil.example.com"))).toBe(
+      false,
+    )
+    expect(fromOwnOrigin(socket("https", "null"))).toBe(false)
   })
 
   it("lets non-browser clients through: they carry no ambient cookie", () => {

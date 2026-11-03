@@ -132,22 +132,6 @@ export function DrawingCanvas({
     })
   }, [drawingId])
 
-  // Link stopped, regenerated, or drawing trashed. Trash keeps the share row,
-  // so only re-reading the drawing flips this tab to read-only.
-  const queryClient = useQueryClient()
-  const handleLinkDead = useCallback(
-    (trashedBy: string | null) => {
-      onLinkDead?.(trashedBy)
-      void queryClient.invalidateQueries({
-        queryKey: drawingShareQueryOptions(drawingId).queryKey,
-      })
-      void queryClient.invalidateQueries({
-        queryKey: drawingQueryOptions(drawingId).queryKey,
-      })
-    },
-    [queryClient, drawingId, onLinkDead],
-  )
-
   // The polled list also carries the space, so a tab that missed a move to
   // Team (another tab, another device) flips without waiting for its next
   // save to be refused. Moves are one-way, so either source saying Team wins.
@@ -173,6 +157,28 @@ export function DrawingCanvas({
   )
   const sceneUnreadable = roomPath !== null && unreadableRoom === roomPath
 
+  // Link stopped, regenerated, or drawing trashed. Trash keeps the share row,
+  // so only re-reading the drawing flips this tab to read-only. If the same
+  // Room is still wanted after that, the server refused it; see below.
+  const queryClient = useQueryClient()
+  const [refusedRoom, setRefusedRoom] = useState<string | null>(null)
+  const handleLinkDead = useCallback(
+    (trashedBy: string | null) => {
+      onLinkDead?.(trashedBy)
+      const refused = roomPath
+      void Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: drawingShareQueryOptions(drawingId).queryKey,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: drawingQueryOptions(drawingId).queryKey,
+        }),
+      ]).then(() => setRefusedRoom(refused))
+    },
+    [queryClient, drawingId, onLinkDead, roomPath],
+  )
+  const roomRefused = roomPath !== null && refusedRoom === roomPath
+
   const room = useRoom({
     room: roomPath,
     // Members use their session name.
@@ -191,6 +197,22 @@ export function DrawingCanvas({
     isLive,
     excalidrawAPI,
   )
+
+  // The room refused this tab though the link still works, so nothing here
+  // is saved. A fresh join may pass.
+  useEffect(() => {
+    if (!roomRefused) return
+    const toastId = `room-refused:${drawingId}`
+    toast.error("Live editing stopped", {
+      id: toastId,
+      duration: Number.POSITIVE_INFINITY,
+      description:
+        "Your changes aren't being saved. Reload the page to try again.",
+    })
+    return () => {
+      toast.dismiss(toastId)
+    }
+  }, [roomRefused, drawingId])
 
   // The room refused the damaged stored scene, so nothing here is saved.
   useEffect(() => {
