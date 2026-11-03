@@ -19,6 +19,7 @@ import {
 } from "./protocol"
 import { reconcileElements } from "./reconcile"
 import type { StoredScene } from "./scene-store"
+import { isSyncableElement } from "./scene-sync"
 
 /** The slice of a crossws `Peer` the room logic uses. */
 export interface RoomPeer {
@@ -360,7 +361,11 @@ export async function joinRoom(
 
   await room.loaded
   if (room.seats.has(peer.id)) {
-    peer.send({ type: "SCENE_INIT", payload: { elements: room.elements } })
+    // The Room keeps stale tombstones to correct tabs with a pre-delete
+    // copy; a joiner never needs them.
+    const now = registry.now()
+    const elements = room.elements.filter((el) => isSyncableElement(el, now))
+    peer.send({ type: "SCENE_INIT", payload: { elements } })
   }
   return { status: "ok" }
 }
@@ -409,13 +414,16 @@ function setFollowTarget(
 
 /**
  * Merges a delta; others get the winners, the sender only its corrections.
- * Returns whether the scene changed, by identity: a version sum misses
- * nonce tie-breaks.
+ * Stale tombstones go only to a sender who can open the drawing: others
+ * never got them, and a guest must not read older deletions. Returns
+ * whether the scene changed, by identity: a version sum misses nonce
+ * tie-breaks.
  */
 function applySceneUpdate(
   room: Room,
   peer: RoomPeer,
   incoming: SceneElement[],
+  now: number,
 ): boolean {
   const previous = room.elements
   const previousById = new Map(previous.map((el) => [el.id, el]))
@@ -437,13 +445,20 @@ function applySceneUpdate(
     if (winner !== element) corrections.push(winner)
   }
 
-  if (winners.length)
+  const published = winners.filter((el) => isSyncableElement(el, now))
+  if (published.length)
     peer.publish(ROOM_TOPIC, {
       type: "SCENE_UPDATE",
-      payload: { elements: winners },
+      payload: { elements: published },
     })
-  if (corrections.length)
-    peer.send({ type: "SCENE_UPDATE", payload: { elements: corrections } })
+  const userId = room.seats.get(peer.id)?.userId ?? null
+  const seesStale =
+    userId !== null && room.access !== null && canAccess(room.access, userId)
+  const corrected = seesStale
+    ? corrections
+    : corrections.filter((el) => isSyncableElement(el, now))
+  if (corrected.length)
+    peer.send({ type: "SCENE_UPDATE", payload: { elements: corrected } })
 
   return changed
 }
@@ -506,7 +521,9 @@ export async function receiveFromPeer(
       // Wait for the stored scene, or the merge would drop it.
       await room.loaded
       if (!room.seats.has(peer.id)) return "evicted"
-      if (applySceneUpdate(room, peer, message.payload.elements))
+      if (
+        applySceneUpdate(room, peer, message.payload.elements, registry.now())
+      )
         markDirty(registry, room)
       return "ok"
 

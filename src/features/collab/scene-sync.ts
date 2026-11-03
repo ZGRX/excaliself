@@ -13,8 +13,11 @@ export const SYNC_FULL_SCENE_INTERVAL_MS = 20_000
 /** Upstream's `DELETED_ELEMENT_TIMEOUT`. */
 export const DELETED_ELEMENT_TIMEOUT_MS = 24 * 60 * 60 * 1000
 
-/** Tombstones stop syncing after a day; unstamped ones always sync. */
-function isSyncableElement(element: SceneElement, now: number): boolean {
+/**
+ * Tombstones stop syncing after a day; unstamped ones always sync. The Room
+ * sends peers only these, so a guest never gets older deletions.
+ */
+export function isSyncableElement(element: SceneElement, now: number): boolean {
   if (!element.isDeleted) return true
   return typeof element.updated === "number"
     ? element.updated > now - DELETED_ELEMENT_TIMEOUT_MS

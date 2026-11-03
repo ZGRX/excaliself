@@ -11,6 +11,7 @@ import {
   shares,
 } from "@/db/schema"
 import { bytesToDataUrl } from "@/features/drawings/file-bytes"
+import { referencedFileIds } from "@/features/drawings/scene-write"
 import { accessibleTo } from "@/features/spaces/access"
 import { resolveShareAccess, type ShareAudience } from "./access"
 
@@ -178,6 +179,30 @@ export type ShareResolution =
       files: { fileId: string; mimeType: string; dataUrl: string }[]
     }
 
+/**
+ * A guest's first paint without deleted elements or their images; the Room
+ * sends recent tombstones itself. Null when the scene can't be read.
+ */
+function liveScene(data: string) {
+  let scene: { elements?: unknown } | null
+  try {
+    scene = JSON.parse(data)
+  } catch {
+    return null
+  }
+  if (!Array.isArray(scene?.elements)) return null
+  const elements = (
+    scene.elements as (Record<string, unknown> | null)[]
+  ).filter(
+    (element): element is Record<string, unknown> =>
+      element !== null && !element.isDeleted,
+  )
+  return {
+    data: JSON.stringify({ ...scene, elements }),
+    fileIds: referencedFileIds(elements),
+  }
+}
+
 /** Resolves a /share/$token visit. "dead" never hints the token existed. */
 export async function resolveShareVisit(
   db: Db,
@@ -206,6 +231,7 @@ export async function resolveShareVisit(
   if (access === "signin")
     return { status: "signin", drawingName: resolved.drawing.name }
 
+  const live = liveScene(resolved.drawing.data)
   const files = await db
     .select({
       fileId: drawingFiles.fileId,
@@ -221,11 +247,13 @@ export async function resolveShareVisit(
     drawing: {
       id: resolved.drawing.id,
       name: resolved.drawing.name,
-      data: resolved.drawing.data,
+      data: live?.data ?? resolved.drawing.data,
     },
-    files: files.map(({ bytes, ...file }) => ({
-      ...file,
-      dataUrl: bytesToDataUrl(file.mimeType, bytes),
-    })),
+    files: files
+      .filter((file) => !live || live.fileIds.has(file.fileId))
+      .map(({ bytes, ...file }) => ({
+        ...file,
+        dataUrl: bytesToDataUrl(file.mimeType, bytes),
+      })),
   }
 }
