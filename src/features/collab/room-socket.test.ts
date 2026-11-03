@@ -8,6 +8,7 @@ import type { RoomJoin } from "./room-token"
 // Hand back the hooks themselves, so a test can call `upgrade` directly.
 vi.mock("nitro", () => ({ defineWebSocketHandler: (hooks: unknown) => hooks }))
 vi.mock("./room-registry", () => ({ rooms: {} }))
+vi.mock("@/env", () => ({ env: {} }))
 
 const { defineRoomSocket } = await import("./room-socket")
 
@@ -60,4 +61,13 @@ test("refused token joins still spend the budget", async () => {
   await expect(socket(admitted, true).upgrade(from(ip))).rejects.toMatchObject({
     status: 429,
   })
+})
+
+test("a sibling-subdomain page is refused, so open closes it as a dead link", async () => {
+  const sibling = new Request("http://app.test/ws/drawings/drawing-1", {
+    headers: { origin: "https://evil.example", "sec-fetch-site": "same-site" },
+  })
+  await expect(socket(admitted, false).upgrade(sibling)).resolves.toBe(
+    undefined,
+  )
 })

@@ -9,7 +9,7 @@ description: The settings of a deployment. Docker Compose takes them from .env, 
 |---|---|---|---|
 | `POSTGRES_PASSWORD` | Yes | — | Database password. Use hex (`openssl rand -hex 24`): it goes into a connection URL |
 | `BETTER_AUTH_SECRET` | Yes | — | Auth signing secret, min 32 chars (`openssl rand -base64 32`) |
-| `BASE_URL` | In production | `http://localhost:3000` | Public URL users open in the browser. Auth rejects sign-ins from any other origin |
+| `BASE_URL` | In production | `http://localhost:3000` | Public URL users open in the browser. Sign-in, live collaboration and image uploads refuse pages from any other origin |
 | `EXCALISELF_VERSION` | No | `latest` | Image tag to run: `latest`, a release like `1.2.3` or `1.2`, or `main` |
 | `EXCALISELF_PORT` | No | `3000` | Host port for the app. `127.0.0.1:3000` keeps it local to a reverse proxy |
 | `POSTGRES_USER` | No | `excaliself` | Database user |

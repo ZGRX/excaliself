@@ -24,6 +24,7 @@ import {
   tokenLookupsBlocked,
 } from "@/features/shares/token-rate-limit"
 import { socketIpOf } from "@/lib/client-ip"
+import { fromOwnOrigin } from "@/lib/same-origin"
 import {
   SERVER_RESTART_CLOSE_CODE,
   SERVER_RESTART_CLOSE_REASON,
@@ -59,6 +60,9 @@ export const defineRoomSocket = (
 ) =>
   defineWebSocketHandler({
     async upgrade(request) {
+      // Refused like a dead link (see below), and not a token guess.
+      if (!fromOwnOrigin(request)) return
+
       const visitor = {
         headers: request.headers,
         socketIp: socketIpOf(request),

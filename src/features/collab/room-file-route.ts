@@ -4,6 +4,7 @@
 
 import { db } from "@/db"
 import { socketIpOf } from "@/lib/client-ip"
+import { fromOwnOrigin } from "@/lib/same-origin"
 import { loadRoomFile, saveRoomFile } from "./room-file-store"
 import { MAX_UPLOAD_BODY_BYTES, parseFileUpload } from "./room-files"
 import type { RoomJoin } from "./room-token"
@@ -85,6 +86,9 @@ export function roomFileHandlers<Params extends { fileId: string }>(
 
   async function postRoomFile(input: Input): Promise<Response> {
     const { request, params } = input
+    // The cookie rides along from sibling subdomains too; only reads are CORS-safe.
+    if (!fromOwnOrigin(request))
+      return new Response("Forbidden", { status: 403 })
     // Cheapest refusal first; the stream is capped again for undeclared bodies.
     const declaredLength = Number(request.headers.get("content-length") ?? "")
     if (

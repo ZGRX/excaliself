@@ -16,6 +16,7 @@ import {
 // Hand back the hooks themselves, so a test can drive them directly.
 vi.mock("nitro", () => ({ defineWebSocketHandler: (hooks: unknown) => hooks }))
 vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: vi.fn() } } }))
+vi.mock("@/env", () => ({ env: {} }))
 
 const { listsSocket } = await import("./socket")
 
@@ -35,9 +36,14 @@ const fakePeer = (context: object = {}) => ({
 })
 
 /** Runs the handshake the way crossws does: upgrade's context lands on the peer. */
-async function connect(session: { user: { id: string } } | null) {
+async function connect(
+  session: { user: { id: string } } | null,
+  headers: HeadersInit = {},
+) {
   vi.mocked(auth.api.getSession).mockResolvedValue(session as never)
-  const accepted = await hooks.upgrade(new Request("http://app.test/ws/lists"))
+  const accepted = await hooks.upgrade(
+    new Request("http://app.test/ws/lists", { headers }),
+  )
   const peer = fakePeer(accepted?.context)
   hooks.open(peer)
   return peer
@@ -51,6 +57,14 @@ test("a socket with no session is closed for good and hears nothing", async () =
 
   expect(peer.close).toHaveBeenCalledWith(SIGNED_OUT_CLOSE_CODE, "Signed out")
   expect(peer.send).not.toHaveBeenCalled()
+})
+
+test("a member's socket from a sibling subdomain is closed as signed out", async () => {
+  const peer = await connect(
+    { user: { id: "ada" } },
+    { origin: "https://evil.example", "sec-fetch-site": "same-site" },
+  )
+  expect(peer.close).toHaveBeenCalledWith(SIGNED_OUT_CLOSE_CODE, "Signed out")
 })
 
 test("a member's socket hears changes until it closes", async () => {

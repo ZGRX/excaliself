@@ -2,6 +2,7 @@
 
 import { defineWebSocketHandler } from "nitro"
 import { auth } from "@/lib/auth"
+import { fromOwnOrigin } from "@/lib/same-origin"
 import {
   SERVER_RESTART_CLOSE_CODE,
   SERVER_RESTART_CLOSE_REASON,
@@ -13,6 +14,7 @@ type ListsContext = { signedIn?: true; unsubscribe?: () => void }
 
 export const listsSocket = defineWebSocketHandler({
   async upgrade(request) {
+    if (!fromOwnOrigin(request)) return
     const session = await auth.api.getSession({ headers: request.headers })
     // Accept and close in `open`: a refused handshake is an opaque 1006 the
     // client can't tell from an outage, so it would retry forever.
