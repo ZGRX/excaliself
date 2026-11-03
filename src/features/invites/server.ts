@@ -48,10 +48,13 @@ export const validateInvite = createServerFn({ method: "GET" })
 export const registerWithInvite = createServerFn({ method: "POST" })
   .validator(registerFieldsSchema.extend({ token: z.string().min(1) }))
   .handler(async ({ data }) => {
+    // Claim the invite before the account exists, so of parallel requests
+    // with one token only the winner creates an account.
     const [invite] = await db
-      .select({ id: invites.id })
-      .from(invites)
+      .update(invites)
+      .set({ usedAt: new Date() })
       .where(usableInvite(data.token))
+      .returning({ id: invites.id })
     if (!invite) {
       throw new Error("Invalid or expired invite link")
     }
@@ -60,32 +63,34 @@ export const registerWithInvite = createServerFn({ method: "POST" })
     // (autoSignIn default) and the tanstackStartCookies plugin copies its
     // set-cookie onto this server function's response, so the browser is
     // authenticated when this call returns.
-    const result = await auth.api.signUpEmail({
-      // Preview derives its base URL from the request.
-      headers: getRequestHeaders(),
-      body: {
-        email: data.email,
-        password: data.password,
-        // Display names are only ever set in Settings; "" means unset and
-        // the email-prefix fallback covers it (spec §5.12).
-        name: "",
-      },
-    })
+    const result = await auth.api
+      .signUpEmail({
+        // Preview derives its base URL from the request.
+        headers: getRequestHeaders(),
+        body: {
+          email: data.email,
+          password: data.password,
+          // Display names are only ever set in Settings; "" means unset and
+          // the email-prefix fallback covers it (spec §5.12).
+          name: "",
+        },
+      })
+      .catch(async (error: unknown) => {
+        // No account was made (e.g. the email is taken): free the invite.
+        await db
+          .update(invites)
+          .set({ usedAt: null })
+          .where(eq(invites.id, invite.id))
+        throw error
+      })
 
     if (!result.user || !result.token) {
       throw new Error("Failed to create account")
     }
-
-    // Conditional update so two concurrent signups can't both consume the
-    // same invite — only the one that wins the update completes registration.
-    const consumed = await db
+    await db
       .update(invites)
-      .set({ usedAt: new Date(), usedBy: result.user.id })
-      .where(usableInvite(data.token))
-      .returning({ id: invites.id })
-    if (consumed.length === 0) {
-      throw new Error("Invalid or expired invite link")
-    }
+      .set({ usedBy: result.user.id })
+      .where(eq(invites.id, invite.id))
   })
 
 export const createInvite = createServerFn({ method: "POST" })
