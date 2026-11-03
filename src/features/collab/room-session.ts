@@ -177,6 +177,14 @@ function markDirty(registry: RoomRegistry, room: Room) {
   armFlush(registry, room)
 }
 
+/** A failed query's message lists its params, which is the whole scene. */
+function errorCode(error: unknown): string {
+  const cause = error instanceof Error ? error.cause : undefined
+  if (typeof cause === "object" && cause !== null && "code" in cause)
+    return String(cause.code)
+  return error instanceof Error ? error.name : String(error)
+}
+
 /**
  * Writes now if dirty; resolves once landed. Chained on `flushing`, so two
  * read-modify-writes never race and the older one can't land last.
@@ -194,7 +202,10 @@ function flushRoom(registry: RoomRegistry, room: Room): Promise<void> {
       },
       (error) => {
         // Still in memory: retry on the throttle. An empty Room stays until it lands.
-        console.error(`[collab] could not flush room ${room.id}`, error)
+        console.error(
+          `[collab] could not flush room ${room.id}`,
+          errorCode(error),
+        )
         room.dirty = true
         armFlush(registry, room)
       },
@@ -413,6 +424,13 @@ function setFollowTarget(
 }
 
 /**
+ * Far more edits than one element gets between syncs. A bigger jump could
+ * only come from a forged frame that wants to win every later merge. A new
+ * id counts from the Room's newest version, as a duplicate keeps its source's.
+ */
+const MAX_VERSION_JUMP = 2 ** 20
+
+/**
  * Merges a delta; others get the winners, the sender only its corrections.
  * Stale tombstones go only to a sender who can open the drawing: others
  * never got them, and a guest must not read older deletions. Returns
@@ -422,11 +440,17 @@ function setFollowTarget(
 function applySceneUpdate(
   room: Room,
   peer: RoomPeer,
-  incoming: SceneElement[],
+  delta: SceneElement[],
   now: number,
 ): boolean {
   const previous = room.elements
   const previousById = new Map(previous.map((el) => [el.id, el]))
+  const newest = previous.reduce((max, el) => Math.max(max, el.version), 0)
+  const incoming = delta.filter(
+    (el) =>
+      el.version <=
+      (previousById.get(el.id)?.version ?? newest) + MAX_VERSION_JUMP,
+  )
   room.elements = reconcileElements(previous, incoming, {})
   const changed =
     room.elements.length !== previous.length ||

@@ -115,6 +115,7 @@ test("SCENE_INIT leaves out month-old tombstones but keeps recent ones", async (
 
   await joinRoom(roomFor(), "init", guest.peer, {
     userId: null,
+    sessionId: null,
     displayName: "g",
   })
 
@@ -139,6 +140,7 @@ test("a tab with a pre-delete copy is corrected after a save and reload", async 
   const member = recordingPeer("member")
   await joinRoom(registry, "converge", member.peer, {
     userId: demoAdmin.id,
+    sessionId: "s:member",
     displayName: null,
   })
 
@@ -178,6 +180,7 @@ test("a guest with a pre-delete copy gets only recent tombstones back", async ()
   const guest = recordingPeer("guest")
   await joinRoom(registry, "guest-stale", guest.peer, {
     userId: null,
+    sessionId: null,
     displayName: "g",
   })
 

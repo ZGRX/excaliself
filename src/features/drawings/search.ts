@@ -18,6 +18,8 @@ export function sceneText(
         return typeof text === "string" ? text : ""
       })
       .join(" ")
+      // Postgres text can't hold U+0000, so one would fail every write
+      .replaceAll("\u0000", "")
       .replace(/\s+/g, " ")
       .trim()
   )

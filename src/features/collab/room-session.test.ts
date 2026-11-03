@@ -1177,7 +1177,13 @@ test("a failed write is retried, and the empty room stays until it lands", async
   try {
     let fail = true
     const registry = recordingRegistry([], async () => {
-      if (fail) throw new Error("database is down")
+      // Shaped like a failed query, whose message lists the scene.
+      if (fail)
+        throw new Error("Failed query: update … params: <scene>", {
+          cause: Object.assign(new Error("connection refused"), {
+            code: "ECONNREFUSED",
+          }),
+        })
     })
     const ada = fakePeer("peer-ada")
     await joinRoom(registry, ROOM, ada, member("Ada"))
@@ -1188,6 +1194,11 @@ test("a failed write is retried, and the empty room stays until it lands", async
     // Room now would drop them.
     expect(registry.writes.map(idsOf)).toEqual([["a"]])
     expect(registry.rooms.has(ROOM)).toBe(true)
+    // Only the code is logged: the scene never lands in the logs.
+    expect(errors).toHaveBeenCalledWith(
+      `[collab] could not flush room ${ROOM}`,
+      "ECONNREFUSED",
+    )
 
     fail = false
     await vi.advanceTimersByTimeAsync(ROOM_FLUSH_INTERVAL_MS)
@@ -1821,4 +1832,48 @@ test("an edit a deleted member sends after the eviction is refused", async () =>
 
   expect(outcome).toBe("evicted")
   expect(registry.rooms.get(ROOM)?.elements).toEqual([])
+})
+
+test("a forged version jump is dropped, so a member's next edit still wins", async () => {
+  const registry = registryFrom(async () => ({
+    elements: [element("e1", 1)],
+    access: null,
+    readable: true,
+  }))
+  const intruder = fakePeer("peer-guest")
+  const ada = fakePeer("peer-ada")
+  await joinRoom(registry, ROOM, intruder, guest)
+  await joinRoom(registry, ROOM, ada, member("Ada"))
+  const stored = () => registry.rooms.get(ROOM)?.elements ?? []
+
+  const jump = 2 ** 20
+  await receiveFromPeer(
+    registry,
+    ROOM,
+    intruder,
+    sceneUpdate([element("e1", 2 + jump), element("new", 2 + jump)]),
+  )
+  expect(stored()).toEqual([element("e1", 1)])
+
+  // The largest jump lands, the member's +1 beats it as usual, and a
+  // duplicate keeps its source's version under a new id.
+  await receiveFromPeer(
+    registry,
+    ROOM,
+    intruder,
+    sceneUpdate([element("e1", 1 + jump, { versionNonce: 0 })]),
+  )
+  await receiveFromPeer(
+    registry,
+    ROOM,
+    ada,
+    sceneUpdate([
+      element("e1", 2 + jump, { isDeleted: true }),
+      element("copy", 1 + jump, { index: "a1" }),
+    ]),
+  )
+  expect(stored()).toEqual([
+    element("e1", 2 + jump, { isDeleted: true }),
+    element("copy", 1 + jump, { index: "a1" }),
+  ])
 })

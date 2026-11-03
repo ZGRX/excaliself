@@ -307,3 +307,37 @@ test("the heartbeat round-trips as the smallest frame the protocol has", () => {
     payload: {},
   })
 })
+
+test("the server refuses a version or nonce no Excalidraw client makes, so no peer can pin an element", () => {
+  const update = (version: number, versionNonce: number) =>
+    JSON.stringify({
+      type: "SCENE_UPDATE",
+      payload: { elements: [{ id: "rect", version, versionNonce }] },
+    })
+
+  for (const [version, versionNonce] of [
+    [Number.MAX_VALUE, 1],
+    [2 ** 53, 1],
+    [1.5, 1],
+    [1, -1],
+    [1, -Number.MAX_VALUE],
+    [1, 0.5],
+  ]) {
+    expect(parseClientMessage(update(version, versionNonce))).toBeNull()
+    // The client takes them: the Room may hold an old stored scene.
+    expect(parseServerMessage(update(version, versionNonce))).not.toBeNull()
+  }
+  // Excalidraw counts versions up from 1 and draws nonces from [0, 2^31).
+  expect(parseClientMessage(update(2 ** 31, 0))).not.toBeNull()
+  expect(parseClientMessage(update(1, 2 ** 31 - 1))).not.toBeNull()
+})
+
+test("the server refuses a deeply nested element, which could never be serialized again", () => {
+  const nested = (depth: number) => "[".repeat(depth) + "]".repeat(depth)
+  const update = (depth: number) =>
+    `{"type":"SCENE_UPDATE","payload":{"elements":[{"id":"p","version":1,"versionNonce":1,"x":${nested(depth)}}]}}`
+
+  expect(parseClientMessage(update(60))).not.toBeNull()
+  expect(parseClientMessage(update(100))).toBeNull()
+  expect(parseClientMessage(update(100_000))).toBeNull()
+})
