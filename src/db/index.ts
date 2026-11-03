@@ -32,7 +32,24 @@ async function connectPostgres(): Promise<Db> {
   return db
 }
 
+// PR code can read process.env, and Coolify copies production values into
+// previews. Only a warning: the local SSO test runs preview mode with secrets.
+function warnAboutPreviewSecrets() {
+  const secrets = (
+    [
+      "GOOGLE_CLIENT_SECRET",
+      "MICROSOFT_CLIENT_SECRET",
+      "OIDC_CLIENT_SECRET",
+    ] as const
+  ).filter((name) => env[name])
+  if (secrets.length === 0) return
+  console.warn(
+    `[preview] ${secrets.join(", ")} set. The code of a PR can read them. Clear them in the preview environment (docs/pr-previews.md).`,
+  )
+}
+
 async function connect() {
+  if (env.PREVIEW_MODE) warnAboutPreviewSecrets()
   // Preview never touches DATABASE_URL: Coolify may hand it the production
   // one, and a PR's migrations must not reach production. Imported on
   // demand, so production never loads PGlite.

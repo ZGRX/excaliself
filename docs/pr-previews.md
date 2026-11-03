@@ -31,17 +31,23 @@ apps.
      the pull request, so do not allow fork PRs.
    - Click **Enable preview deployments**.
 4. **Environment Variables**, in the **Preview Deployments** section. Coolify
-   copies the production values into this section, so change these:
+   copies the production values into this section. The code of a PR can read
+   every variable in its container, so no production secret must stay here.
+   Change these:
 
    | Variable | Value |
    |---|---|
    | `PREVIEW_MODE` | `true` |
    | `PREVIEW_HOSTS` | `*.draw.example.com` |
-   | `BETTER_AUTH_SECRET` | A new random value (`openssl rand -base64 32`). The code of a PR can read it, so do not use the production secret |
+   | `BETTER_AUTH_SECRET` | A new random value (`openssl rand -base64 32`) |
    | `POSTGRES_PASSWORD` | A new random value. The compose file requires it, but the preview does not use the database |
+   | `DATABASE_URL` | Empty. Preview mode does not use it, and a copied value can hold the production password |
+   | `GOOGLE_CLIENT_SECRET`, `MICROSOFT_CLIENT_SECRET`, `OIDC_CLIENT_SECRET` | Empty. Preview mode turns off single sign-on |
 
-   `BASE_URL` and `DATABASE_URL` can keep the copied values. Preview mode
-   ignores them.
+   Also clear any other secret that you added to production. `BASE_URL` and
+   the other single sign-on variables are not secret and can keep the copied
+   values. If a client secret still reaches the preview, its log shows a
+   `[preview] ... set` warning at boot.
 
    Turn on **Runtime** for each preview variable. Coolify can copy them with
    Runtime off, and then it uses the production value in the preview.

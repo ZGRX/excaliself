@@ -40,5 +40,5 @@ For throwaway pull request instances. See
 
 | Variable | Description |
 |---|---|
-| `PREVIEW_MODE` | `true` runs an in-memory PGlite instead of Postgres, seeded with an admin and example drawings. It ignores `DATABASE_URL` and `BASE_URL` and makes `BETTER_AUTH_SECRET` optional. Data is lost on restart |
+| `PREVIEW_MODE` | `true` runs an in-memory PGlite instead of Postgres, seeded with an admin and example drawings. It ignores `DATABASE_URL` and `BASE_URL` and makes `BETTER_AUTH_SECRET` optional. Data is lost on restart. A preview runs the code of a pull request, so do not give it production secrets |
 | `PREVIEW_HOSTS` | Comma-separated hosts a preview answers on, e.g. `*.draw.example.com`. Auth refuses other hosts; localhost always works |
