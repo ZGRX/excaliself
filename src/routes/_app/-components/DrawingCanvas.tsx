@@ -20,6 +20,7 @@ import { PresenceAvatars } from "@/components/presence-avatars"
 import { ReconnectingIndicator } from "@/components/reconnecting-indicator"
 import { Button } from "@/components/ui/button"
 import { useSidebar } from "@/components/ui/sidebar"
+import { useRefreshLiveOnRoster } from "@/features/collab/queries"
 import {
   roomPathForDrawing,
   roomPathForToken,
@@ -189,6 +190,7 @@ export function DrawingCanvas({
     onSceneUnreadable: handleSceneUnreadable,
     storedFileIds,
   })
+  useRefreshLiveOnRoster(room.others)
   // Autosave stays live until the share query answers; the server refuses the
   // write if the drawing is shared or in Team.
   const isLive = !readOnly && (isTeam || share != null)

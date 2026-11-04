@@ -3,7 +3,8 @@ import { act, cleanup, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, expect, test, vi } from "vitest"
 import { POLL_INTERVAL_MS } from "@/lib/polling"
 import type { LiveDrawing, LiveSnapshot } from "./live"
-import { useLiveDrawing } from "./queries"
+import type { Participant } from "./protocol"
+import { useLiveDrawing, useRefreshLiveOnRoster } from "./queries"
 import { getLiveDrawings } from "./server"
 
 vi.mock("./server", () => ({ getLiveDrawings: vi.fn() }))
@@ -84,6 +85,35 @@ test("the badge refreshes on the poll interval", async () => {
   await act(async () => {
     await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
   })
+
+  await waitFor(() => {
+    expect(rowText("d1")).toBe("live:1")
+  })
+})
+
+function RoomRow({ id, others }: { id: string; others: Participant[] }) {
+  useRefreshLiveOnRoster(others)
+  return <Row id={id} />
+}
+
+test("a roster change in the open room refreshes the badge before the next poll", async () => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  const view = (others: Participant[]) => (
+    <QueryClientProvider client={queryClient}>
+      <RoomRow id="d1" others={others} />
+    </QueryClientProvider>
+  )
+  const { rerender } = render(view([]))
+  await waitFor(() => {
+    expect(getLiveDrawings).toHaveBeenCalledTimes(1)
+  })
+
+  vi.mocked(getLiveDrawings).mockResolvedValue(snapshot(badge("d1", 1)))
+  rerender(
+    view([{ connectionId: "c2", name: "Quiet Otter", color, isGuest: false }]),
+  )
 
   await waitFor(() => {
     expect(rowText("d1")).toBe("live:1")
