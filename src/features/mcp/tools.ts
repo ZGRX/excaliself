@@ -43,7 +43,30 @@ const json = (value: unknown) => text(JSON.stringify(value))
 /** One per request: the server knows its member and the instance's origin. */
 export function createMcpServer(db: Db, member: Member, origin: string) {
   const server = new McpServer(
-    { name: "excaliself", version: packageJson.version },
+    {
+      name: "excaliself",
+      title: "Excaliself",
+      version: packageJson.version,
+      // Clients show this icon. Without it, they guess from the domain.
+      icons: [
+        {
+          src: `${origin}/favicon.svg`,
+          mimeType: "image/svg+xml",
+          sizes: ["any"],
+        },
+        {
+          src: `${origin}/logo192.png`,
+          mimeType: "image/png",
+          sizes: ["192x192"],
+        },
+        {
+          src: `${origin}/logo512.png`,
+          mimeType: "image/png",
+          sizes: ["512x512"],
+        },
+      ],
+      websiteUrl: origin,
+    },
     {
       // Bounds the work one create_drawing call can ask for.
       maxToolInputElements: 20_000,
