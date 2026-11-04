@@ -35,7 +35,7 @@ Optional. Each provider is on when its variables are set. See
 
 ## Previews
 
-For throwaway pull request instances. See
+For throwaway instances: a [quick try](/docs/#try-it-first) on your machine, or
 [PR previews](https://github.com/maciekzygmunt/excaliself/blob/main/docs/pr-previews.md).
 
 | Variable | Description |

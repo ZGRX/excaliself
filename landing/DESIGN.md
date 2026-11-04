@@ -75,8 +75,9 @@ FEATURES (5 pairs: editor, live, Team space, ⌘K, members; alternating, text al
 
 STATEMENT (text cols 1-7, "a home" circled; the Excalidraw window sits unchanged inside an Excaliself frame, cols 8-12)
 
-DEPLOY (flowchart + terminal)
+DEPLOY (flowchart + terminal, then the one-command try-it)
 | 3 rough step boxes ↓ ↓ | terminal |
+| try it first: text     | terminal |
 
 FAQ (h2 cols 1-4, list cols 6-12)
 

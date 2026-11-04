@@ -1,6 +1,7 @@
 ---
 import Icon from "./Icon.astro"
 import Selection from "./Selection.astro"
+import StarCount from "./StarCount.astro"
 import { line, pen } from "../lib/sketch"
 
 const repo = "https://github.com/maciekzygmunt/excaliself"
@@ -38,6 +39,7 @@ const underline = (seed: number) => line([[0, 4], [100, 4]], { seed, stroke: pen
       <a href={repo} class="btn btn-line selectable !min-h-10 !px-3.5 text-[0.9375rem]">
         <Icon name="github-logo" size={18} />
         GitHub
+        <StarCount />
         <Selection />
       </a>
     </div>

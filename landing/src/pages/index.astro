@@ -3,6 +3,8 @@ import Layout from "../layouts/Layout.astro"
 import Icon from "../components/Icon.astro"
 import Selection from "../components/Selection.astro"
 import Sketch from "../components/Sketch.astro"
+import StarCount from "../components/StarCount.astro"
+import Terminal from "../components/Terminal.astro"
 import HeroDiagram from "../components/HeroDiagram.astro"
 import Tour from "../components/Tour.astro"
 import { Image } from "astro:assets"
@@ -93,6 +95,9 @@ const compose = [
   "# set POSTGRES_PASSWORD, BETTER_AUTH_SECRET, and BASE_URL in .env",
   "docker compose up -d",
 ]
+
+// One container with example drawings and an in-memory database, to look around before installing.
+const tryIt = ["docker run --rm -p 127.0.0.1:3000:3000 -e PREVIEW_MODE=true ghcr.io/maciekzygmunt/excaliself"]
 
 // `more` is an optional in-page link after the answer; the FAQ schema gets the plain answer.
 const faq: { q: string; a: string; more?: { href: string; label: string } }[] = [
@@ -210,7 +215,7 @@ const stepArrow = (i: number) => arrow([[20, 2], [22, 26], [20, 50]], { seed: 33
           </p>
           <div class="flex flex-wrap items-center gap-4">
             <a href="#deploy" class="btn btn-ink selectable max-sm:w-full">Deploy in five minutes<Selection /></a>
-            <a href={repo} class="btn btn-line selectable max-sm:w-full"><Icon name="github-logo" size={18} />Read the source<Selection /></a>
+            <a href={repo} class="btn btn-line selectable max-sm:w-full"><Icon name="github-logo" size={18} />Read the source<StarCount /><Selection /></a>
           </div>
         </div>
         <div class="hero-diagram mt-10 md:mt-12">
@@ -331,17 +336,22 @@ const stepArrow = (i: number) => arrow([[20, 2], [22, 26], [20, 50]], { seed: 33
             <Icon name="arrow-right" size={16} class="transition-transform duration-300 group-hover:translate-x-1" />
           </a>
         </div>
-        <div class="col-span-12 self-start rounded-xl bg-ink text-neutral-200 lg:sticky lg:top-24 lg:col-span-7" data-terminal>
-          <div class="flex items-center justify-between border-b border-white/10 py-2 pr-2 pl-5">
-            <span class="font-mono text-xs text-neutral-400">Terminal</span>
-            <button type="button" class="btn selectable !min-h-10 !px-3 text-sm text-neutral-200 hover:bg-white/10" data-copy>
-              <Icon name="copy" size={16} />
-              <span data-copy-label>Copy</span>
-              <Selection />
-            </button>
-          </div>
-          <pre class="p-5 font-mono text-xs leading-relaxed md:p-6 md:text-sm"><code>{compose.map((line) => line.startsWith("#") ? <span class="block whitespace-pre-wrap pl-[2ch] -indent-[2ch] [overflow-wrap:anywhere] text-neutral-400">{line}</span> : <span class="block whitespace-pre-wrap pl-[2ch] -indent-[2ch] [overflow-wrap:anywhere]"><span class="select-none text-[#a39dea]">$ </span>{line}</span>)}</code></pre>
+        <Terminal lines={compose} class="col-span-12 self-start lg:sticky lg:top-24 lg:col-span-7" />
+      </div>
+      <div id="try" class="grid-12 mt-20 scroll-mt-24 items-center gap-y-8 md:mt-28">
+        <div class="col-span-12 lg:col-span-5">
+          <h3 class="text-head leading-[1.02] font-semibold tracking-[-0.035em]">Or try it first, with one command</h3>
+          <p class="mt-4 text-muted">
+            No Postgres and no .env. The container starts with example drawings and keeps everything in memory, so it is
+            gone when the container stops.
+          </p>
+          <p class="mt-4 text-muted">
+            Open <code class="rounded bg-well px-1.5 py-0.5 font-mono text-[0.875em] whitespace-nowrap text-ink">localhost:3000/preview/login</code>.
+            To draw together, open it with <code class="rounded bg-well px-1.5 py-0.5 font-mono text-[0.875em] whitespace-nowrap text-ink">?account=new</code>
+            in a second browser: that signs in as a new member.
+          </p>
         </div>
+        <Terminal lines={tryIt} class="col-span-12 lg:col-span-7" />
       </div>
     </section>
 
@@ -405,7 +415,7 @@ const stepArrow = (i: number) => arrow([[20, 2], [22, 26], [20, 50]], { seed: 33
           <p class="text-muted">No third party accounts, no telemetry, no lock in. Stop the container and your drawings are still in your Postgres.</p>
           <div class="flex flex-wrap gap-4">
             <a href="#deploy" class="btn btn-ink selectable max-sm:w-full">Deploy in five minutes<Selection /></a>
-            <a href={repo} class="btn btn-line selectable max-sm:w-full"><Icon name="github-logo" size={18} />GitHub<Selection /></a>
+            <a href={repo} class="btn btn-line selectable max-sm:w-full"><Icon name="github-logo" size={18} />GitHub<StarCount /><Selection /></a>
           </div>
         </div>
       </div>

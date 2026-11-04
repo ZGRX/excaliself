@@ -139,7 +139,7 @@ export const demoDrawings: DemoDrawing[] = [
       text(
         "welcome-body",
         [0, 70],
-        "This is a preview instance with example content.\nChanges are kept until the next deploy.",
+        "This is a preview instance with example content.\nChanges are lost when the app restarts.",
       ),
       shape("ellipse", "welcome-sun", [520, -20, 90, 90], "#ffec99"),
     ],

@@ -1,0 +1,15 @@
+---
+// The star count inside a GitHub button. Renders nothing when the build could not fetch it.
+import Icon from "./Icon.astro"
+import { stars } from "../lib/stars"
+
+const count = await stars
+---
+
+{count && (
+  <span class="flex items-center gap-1 border-l border-current/20 pl-2.5 font-medium tabular-nums opacity-75">
+    <Icon name="star" size={15} />
+    {count}
+    <span class="sr-only">{" stars"}</span>
+  </span>
+)}

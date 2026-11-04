@@ -6,6 +6,21 @@ description: Run Excaliself and its Postgres database on your server with one co
 You need a server with Docker. The prebuilt image runs on amd64 and arm64, so
 nothing is built on your server.
 
+## Try it first
+
+To look around before you install, run one container. It needs no Postgres and
+no `.env`:
+
+```bash
+docker run --rm -p 127.0.0.1:3000:3000 -e PREVIEW_MODE=true ghcr.io/maciekzygmunt/excaliself
+```
+
+Open `http://localhost:3000/preview/login` to sign in as the admin, with
+example drawings. To test live collaboration, open
+`http://localhost:3000/preview/login?account=new` in a second browser: it signs
+in as a new member. Data lives in memory and is gone when the container stops.
+See [preview mode](/docs/environment/#previews).
+
 ## Install
 
 ```bash

@@ -20,6 +20,24 @@
   <img src="docs/images/home-dark.png" width="49%" alt="The same home screen in the dark theme">
 </p>
 
+<p align="center">
+  <img src="docs/images/live-collab.gif" width="100%" alt="Two browsers edit one drawing: a box drawn on the left appears live on the right, an arrow drawn on the right appears on the left, and after a reload every change is still there">
+</p>
+
+## Try it in 10 seconds
+
+```bash
+docker run --rm -p 127.0.0.1:3000:3000 -e PREVIEW_MODE=true ghcr.io/maciekzygmunt/excaliself
+```
+
+Open <http://localhost:3000/preview/login> to sign in as the admin, with example
+drawings. To test live collaboration, open
+<http://localhost:3000/preview/login?account=new> in a second browser: it signs
+in as a new member.
+
+Data lives in memory and is gone when the container stops. For real use, see
+[Deploy](#deploy).
+
 ## Features
 
 - **The full Excalidraw editor**, with auto-save. Images pasted into a drawing are stored too.
