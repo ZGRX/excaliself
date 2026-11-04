@@ -16,13 +16,16 @@ import { Route as InviteRouteImport } from './routes/invite'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SetupRouteImport } from './routes/setup'
+import { Route as DotwellKnownOauthAuthorizationServerRouteImport } from './routes/[.]well-known/oauth-authorization-server'
 import { Route as AppDrawingsRouteImport } from './routes/_app/drawings'
 import { Route as AppSettingsRouteRouteImport } from './routes/_app/settings/route'
 import { Route as AppTrashRouteImport } from './routes/_app/trash'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiMcpRouteImport } from './routes/api/mcp'
+import { Route as OauthAuthorizeRouteImport } from './routes/oauth/authorize'
 import { Route as PreviewLoginRouteImport } from './routes/preview/login'
 import { Route as ShareTokenRouteImport } from './routes/share/$token'
+import { Route as DotwellKnownOauthProtectedResourceIndexRouteImport } from './routes/[.]well-known/oauth-protected-resource/index'
 import { Route as AppDrawIndexRouteImport } from './routes/_app/draw/index'
 import { Route as AppDrawIdRouteImport } from './routes/_app/draw/$id'
 import { Route as AppFolderIdRouteImport } from './routes/_app/folder.$id'
@@ -33,6 +36,9 @@ import { Route as AppSettingsInvitesRouteImport } from './routes/_app/settings/i
 import { Route as AppSettingsMcpRouteImport } from './routes/_app/settings/mcp'
 import { Route as AppSettingsMembersRouteImport } from './routes/_app/settings/members'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiOauthRegisterRouteImport } from './routes/api/oauth/register'
+import { Route as ApiOauthTokenRouteImport } from './routes/api/oauth/token'
+import { Route as DotwellKnownOauthProtectedResourceApiMcpRouteImport } from './routes/[.]well-known/oauth-protected-resource/api.mcp'
 import { Route as ApiDrawingsIdFilesFileIdRouteImport } from './routes/api/drawings/$id/files/$fileId'
 import { Route as ApiRoomsTokenFilesFileIdRouteImport } from './routes/api/rooms/$token/files/$fileId'
 
@@ -70,6 +76,12 @@ const SetupRoute = SetupRouteImport.update({
   path: '/setup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DotwellKnownOauthAuthorizationServerRoute =
+  DotwellKnownOauthAuthorizationServerRouteImport.update({
+    id: '/.well-known/oauth-authorization-server',
+    path: '/.well-known/oauth-authorization-server',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AppDrawingsRoute = AppDrawingsRouteImport.update({
   id: '/drawings',
   path: '/drawings',
@@ -95,6 +107,11 @@ const ApiMcpRoute = ApiMcpRouteImport.update({
   path: '/api/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OauthAuthorizeRoute = OauthAuthorizeRouteImport.update({
+  id: '/oauth/authorize',
+  path: '/oauth/authorize',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PreviewLoginRoute = PreviewLoginRouteImport.update({
   id: '/preview/login',
   path: '/preview/login',
@@ -105,6 +122,12 @@ const ShareTokenRoute = ShareTokenRouteImport.update({
   path: '/share/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DotwellKnownOauthProtectedResourceIndexRoute =
+  DotwellKnownOauthProtectedResourceIndexRouteImport.update({
+    id: '/.well-known/oauth-protected-resource/',
+    path: '/.well-known/oauth-protected-resource/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AppDrawIndexRoute = AppDrawIndexRouteImport.update({
   id: '/draw/',
   path: '/draw/',
@@ -155,6 +178,22 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiOauthRegisterRoute = ApiOauthRegisterRouteImport.update({
+  id: '/api/oauth/register',
+  path: '/api/oauth/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiOauthTokenRoute = ApiOauthTokenRouteImport.update({
+  id: '/api/oauth/token',
+  path: '/api/oauth/token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DotwellKnownOauthProtectedResourceApiMcpRoute =
+  DotwellKnownOauthProtectedResourceApiMcpRouteImport.update({
+    id: '/.well-known/oauth-protected-resource/api/mcp',
+    path: '/.well-known/oauth-protected-resource/api/mcp',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiDrawingsIdFilesFileIdRoute =
   ApiDrawingsIdFilesFileIdRouteImport.update({
     id: '/api/drawings/$id/files/$fileId',
@@ -176,10 +215,12 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/setup': typeof SetupRoute
   '/settings': typeof AppSettingsRouteRouteWithChildren
+  '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
   '/drawings': typeof AppDrawingsRoute
   '/trash': typeof AppTrashRoute
   '/api/health': typeof ApiHealthRoute
   '/api/mcp': typeof ApiMcpRoute
+  '/oauth/authorize': typeof OauthAuthorizeRoute
   '/preview/login': typeof PreviewLoginRoute
   '/share/$token': typeof ShareTokenRoute
   '/draw/$id': typeof AppDrawIdRoute
@@ -190,8 +231,12 @@ export interface FileRoutesByFullPath {
   '/settings/mcp': typeof AppSettingsMcpRoute
   '/settings/members': typeof AppSettingsMembersRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/oauth/register': typeof ApiOauthRegisterRoute
+  '/api/oauth/token': typeof ApiOauthTokenRoute
+  '/.well-known/oauth-protected-resource/': typeof DotwellKnownOauthProtectedResourceIndexRoute
   '/draw/': typeof AppDrawIndexRoute
   '/settings/': typeof AppSettingsIndexRoute
+  '/.well-known/oauth-protected-resource/api/mcp': typeof DotwellKnownOauthProtectedResourceApiMcpRoute
   '/api/drawings/$id/files/$fileId': typeof ApiDrawingsIdFilesFileIdRoute
   '/api/rooms/$token/files/$fileId': typeof ApiRoomsTokenFilesFileIdRoute
 }
@@ -202,10 +247,12 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/reset-password': typeof ResetPasswordRoute
   '/setup': typeof SetupRoute
+  '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
   '/drawings': typeof AppDrawingsRoute
   '/trash': typeof AppTrashRoute
   '/api/health': typeof ApiHealthRoute
   '/api/mcp': typeof ApiMcpRoute
+  '/oauth/authorize': typeof OauthAuthorizeRoute
   '/preview/login': typeof PreviewLoginRoute
   '/share/$token': typeof ShareTokenRoute
   '/draw/$id': typeof AppDrawIdRoute
@@ -216,8 +263,12 @@ export interface FileRoutesByTo {
   '/settings/mcp': typeof AppSettingsMcpRoute
   '/settings/members': typeof AppSettingsMembersRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/oauth/register': typeof ApiOauthRegisterRoute
+  '/api/oauth/token': typeof ApiOauthTokenRoute
+  '/.well-known/oauth-protected-resource': typeof DotwellKnownOauthProtectedResourceIndexRoute
   '/draw': typeof AppDrawIndexRoute
   '/settings': typeof AppSettingsIndexRoute
+  '/.well-known/oauth-protected-resource/api/mcp': typeof DotwellKnownOauthProtectedResourceApiMcpRoute
   '/api/drawings/$id/files/$fileId': typeof ApiDrawingsIdFilesFileIdRoute
   '/api/rooms/$token/files/$fileId': typeof ApiRoomsTokenFilesFileIdRoute
 }
@@ -231,10 +282,12 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/setup': typeof SetupRoute
   '/_app/settings': typeof AppSettingsRouteRouteWithChildren
+  '/.well-known/oauth-authorization-server': typeof DotwellKnownOauthAuthorizationServerRoute
   '/_app/drawings': typeof AppDrawingsRoute
   '/_app/trash': typeof AppTrashRoute
   '/api/health': typeof ApiHealthRoute
   '/api/mcp': typeof ApiMcpRoute
+  '/oauth/authorize': typeof OauthAuthorizeRoute
   '/preview/login': typeof PreviewLoginRoute
   '/share/$token': typeof ShareTokenRoute
   '/_app/draw/$id': typeof AppDrawIdRoute
@@ -245,8 +298,12 @@ export interface FileRoutesById {
   '/_app/settings/mcp': typeof AppSettingsMcpRoute
   '/_app/settings/members': typeof AppSettingsMembersRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/oauth/register': typeof ApiOauthRegisterRoute
+  '/api/oauth/token': typeof ApiOauthTokenRoute
+  '/.well-known/oauth-protected-resource/': typeof DotwellKnownOauthProtectedResourceIndexRoute
   '/_app/draw/': typeof AppDrawIndexRoute
   '/_app/settings/': typeof AppSettingsIndexRoute
+  '/.well-known/oauth-protected-resource/api/mcp': typeof DotwellKnownOauthProtectedResourceApiMcpRoute
   '/api/drawings/$id/files/$fileId': typeof ApiDrawingsIdFilesFileIdRoute
   '/api/rooms/$token/files/$fileId': typeof ApiRoomsTokenFilesFileIdRoute
 }
@@ -260,10 +317,12 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/setup'
     | '/settings'
+    | '/.well-known/oauth-authorization-server'
     | '/drawings'
     | '/trash'
     | '/api/health'
     | '/api/mcp'
+    | '/oauth/authorize'
     | '/preview/login'
     | '/share/$token'
     | '/draw/$id'
@@ -274,8 +333,12 @@ export interface FileRouteTypes {
     | '/settings/mcp'
     | '/settings/members'
     | '/api/auth/$'
+    | '/api/oauth/register'
+    | '/api/oauth/token'
+    | '/.well-known/oauth-protected-resource/'
     | '/draw/'
     | '/settings/'
+    | '/.well-known/oauth-protected-resource/api/mcp'
     | '/api/drawings/$id/files/$fileId'
     | '/api/rooms/$token/files/$fileId'
   fileRoutesByTo: FileRoutesByTo
@@ -286,10 +349,12 @@ export interface FileRouteTypes {
     | '/login'
     | '/reset-password'
     | '/setup'
+    | '/.well-known/oauth-authorization-server'
     | '/drawings'
     | '/trash'
     | '/api/health'
     | '/api/mcp'
+    | '/oauth/authorize'
     | '/preview/login'
     | '/share/$token'
     | '/draw/$id'
@@ -300,8 +365,12 @@ export interface FileRouteTypes {
     | '/settings/mcp'
     | '/settings/members'
     | '/api/auth/$'
+    | '/api/oauth/register'
+    | '/api/oauth/token'
+    | '/.well-known/oauth-protected-resource'
     | '/draw'
     | '/settings'
+    | '/.well-known/oauth-protected-resource/api/mcp'
     | '/api/drawings/$id/files/$fileId'
     | '/api/rooms/$token/files/$fileId'
   id:
@@ -314,10 +383,12 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/setup'
     | '/_app/settings'
+    | '/.well-known/oauth-authorization-server'
     | '/_app/drawings'
     | '/_app/trash'
     | '/api/health'
     | '/api/mcp'
+    | '/oauth/authorize'
     | '/preview/login'
     | '/share/$token'
     | '/_app/draw/$id'
@@ -328,8 +399,12 @@ export interface FileRouteTypes {
     | '/_app/settings/mcp'
     | '/_app/settings/members'
     | '/api/auth/$'
+    | '/api/oauth/register'
+    | '/api/oauth/token'
+    | '/.well-known/oauth-protected-resource/'
     | '/_app/draw/'
     | '/_app/settings/'
+    | '/.well-known/oauth-protected-resource/api/mcp'
     | '/api/drawings/$id/files/$fileId'
     | '/api/rooms/$token/files/$fileId'
   fileRoutesById: FileRoutesById
@@ -342,11 +417,17 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SetupRoute: typeof SetupRoute
+  DotwellKnownOauthAuthorizationServerRoute: typeof DotwellKnownOauthAuthorizationServerRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiMcpRoute: typeof ApiMcpRoute
+  OauthAuthorizeRoute: typeof OauthAuthorizeRoute
   PreviewLoginRoute: typeof PreviewLoginRoute
   ShareTokenRoute: typeof ShareTokenRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiOauthRegisterRoute: typeof ApiOauthRegisterRoute
+  ApiOauthTokenRoute: typeof ApiOauthTokenRoute
+  DotwellKnownOauthProtectedResourceIndexRoute: typeof DotwellKnownOauthProtectedResourceIndexRoute
+  DotwellKnownOauthProtectedResourceApiMcpRoute: typeof DotwellKnownOauthProtectedResourceApiMcpRoute
   ApiDrawingsIdFilesFileIdRoute: typeof ApiDrawingsIdFilesFileIdRoute
   ApiRoomsTokenFilesFileIdRoute: typeof ApiRoomsTokenFilesFileIdRoute
 }
@@ -402,6 +483,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SetupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/.well-known/oauth-authorization-server': {
+      id: '/.well-known/oauth-authorization-server'
+      path: '/.well-known/oauth-authorization-server'
+      fullPath: '/.well-known/oauth-authorization-server'
+      preLoaderRoute: typeof DotwellKnownOauthAuthorizationServerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_app/drawings': {
       id: '/_app/drawings'
       path: '/drawings'
@@ -437,6 +525,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiMcpRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/oauth/authorize': {
+      id: '/oauth/authorize'
+      path: '/oauth/authorize'
+      fullPath: '/oauth/authorize'
+      preLoaderRoute: typeof OauthAuthorizeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/preview/login': {
       id: '/preview/login'
       path: '/preview/login'
@@ -449,6 +544,13 @@ declare module '@tanstack/react-router' {
       path: '/share/$token'
       fullPath: '/share/$token'
       preLoaderRoute: typeof ShareTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.well-known/oauth-protected-resource/': {
+      id: '/.well-known/oauth-protected-resource/'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource/'
+      preLoaderRoute: typeof DotwellKnownOauthProtectedResourceIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/draw/': {
@@ -521,6 +623,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/oauth/register': {
+      id: '/api/oauth/register'
+      path: '/api/oauth/register'
+      fullPath: '/api/oauth/register'
+      preLoaderRoute: typeof ApiOauthRegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/oauth/token': {
+      id: '/api/oauth/token'
+      path: '/api/oauth/token'
+      fullPath: '/api/oauth/token'
+      preLoaderRoute: typeof ApiOauthTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.well-known/oauth-protected-resource/api/mcp': {
+      id: '/.well-known/oauth-protected-resource/api/mcp'
+      path: '/.well-known/oauth-protected-resource/api/mcp'
+      fullPath: '/.well-known/oauth-protected-resource/api/mcp'
+      preLoaderRoute: typeof DotwellKnownOauthProtectedResourceApiMcpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/drawings/$id/files/$fileId': {
       id: '/api/drawings/$id/files/$fileId'
       path: '/api/drawings/$id/files/$fileId'
@@ -589,11 +712,20 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SetupRoute: SetupRoute,
+  DotwellKnownOauthAuthorizationServerRoute:
+    DotwellKnownOauthAuthorizationServerRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiMcpRoute: ApiMcpRoute,
+  OauthAuthorizeRoute: OauthAuthorizeRoute,
   PreviewLoginRoute: PreviewLoginRoute,
   ShareTokenRoute: ShareTokenRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiOauthRegisterRoute: ApiOauthRegisterRoute,
+  ApiOauthTokenRoute: ApiOauthTokenRoute,
+  DotwellKnownOauthProtectedResourceIndexRoute:
+    DotwellKnownOauthProtectedResourceIndexRoute,
+  DotwellKnownOauthProtectedResourceApiMcpRoute:
+    DotwellKnownOauthProtectedResourceApiMcpRoute,
   ApiDrawingsIdFilesFileIdRoute: ApiDrawingsIdFilesFileIdRoute,
   ApiRoomsTokenFilesFileIdRoute: ApiRoomsTokenFilesFileIdRoute,
 }

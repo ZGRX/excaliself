@@ -115,6 +115,41 @@ export const accessTokens = pgTable("access_tokens", {
     .$defaultFn(() => new Date()),
 })
 
+// OAuth clients an MCP client such as Claude.ai registered for itself
+// (Dynamic Client Registration). All public: PKCE stands in for a secret.
+export const oauthClients = pgTable("oauth_clients", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  redirectUris: jsonb("redirectUris").$type<string[]>().notNull(),
+  createdAt: timestamp("createdAt")
+    .notNull()
+    .$defaultFn(() => new Date()),
+})
+
+// One member's consent to one OAuth client. It holds a one-time code until
+// the client trades it for tokens, then the current access and refresh token.
+// Only hashes are kept. Deleting the row (or the member) ends the grant.
+export const oauthGrants = pgTable("oauth_grants", {
+  id: text("id").primaryKey(),
+  userId: text("userId")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  clientId: text("clientId")
+    .notNull()
+    .references(() => oauthClients.id, { onDelete: "cascade" }),
+  redirectUri: text("redirectUri").notNull(),
+  codeHash: text("codeHash").unique(),
+  codeChallenge: text("codeChallenge").notNull(),
+  codeExpiresAt: timestamp("codeExpiresAt").notNull(),
+  accessTokenHash: text("accessTokenHash").unique(),
+  accessTokenExpiresAt: timestamp("accessTokenExpiresAt"),
+  refreshTokenHash: text("refreshTokenHash").unique(),
+  lastUsedAt: timestamp("lastUsedAt"),
+  createdAt: timestamp("createdAt")
+    .notNull()
+    .$defaultFn(() => new Date()),
+})
+
 // Admin-generated password-reset links (issue #68) — the product's only
 // reset flow, shared out-of-band. Same single-use token model as invites,
 // but targeted at a user and short-lived (24 h).

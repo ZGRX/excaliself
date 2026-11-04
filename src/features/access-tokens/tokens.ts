@@ -12,7 +12,7 @@ const PREFIX = "exs_"
 // lastUsedAt is written at most this often, not on every request.
 const LAST_USED_GRANULARITY_MS = 60_000
 
-const hashToken = (token: string) =>
+export const hashToken = (token: string) =>
   createHash("sha256").update(token).digest("hex")
 
 /** Returns the token itself: the only time it exists outside the client. */

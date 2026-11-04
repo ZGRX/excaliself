@@ -50,7 +50,7 @@ Data lives in memory and is gone when the container stops. For real use, see
 - **Drop files in.** Drag `.excalidraw` files (or `.png`/`.svg` exports with the scene) from your computer onto a folder in the sidebar.
 - **Trash** with restore. Deleted items are purged automatically after 30 days.
 - **Invite-only accounts.** The first visitor creates the admin account; everyone else joins by invite link.
-- **Connect your AI client.** Claude Code, Claude Desktop, and other MCP clients can find, read, and create drawings with a personal access token. The instance needs no LLM API key.
+- **Connect your AI client.** Claude.ai, Claude Code, Claude Desktop, and other MCP clients can find, read, and create drawings. They sign in with OAuth or a personal access token. The instance needs no LLM API key.
 - **Single sign-on** with Google Workspace, Microsoft Entra ID, or any OIDC provider (Okta, Authentik, Keycloak). People from your email domains join on their first sign-in, with no invite.
 - **Admin tools** under Settings: manage members and roles, create password-reset links, and see instance stats.
 - **Light and dark themes**, with an optional separate theme for the canvas.
@@ -125,6 +125,14 @@ If the only admin loses their password, see
 Excaliself has an [MCP](https://modelcontextprotocol.io) server at `/api/mcp`.
 Your AI client brings the model, so the instance needs no LLM API key.
 
+**Claude.ai** (web, desktop, and mobile) signs in with OAuth, with no token.
+In Claude, open **Settings**, then **Connectors**, click **Add custom
+connector**, and enter `https://<your instance>/api/mcp`. Then sign in to
+Excaliself and click **Allow**. The instance must be reachable from the
+public internet over HTTPS.
+
+Other clients use an access token:
+
 1. In Excaliself, open **Settings**, then **MCP**, and click
    **New token**. Copy the token: you see it only once.
 2. Add the server to your client, with your instance's URL and the token.
@@ -160,7 +168,8 @@ add this to `claude_desktop_config.json`, and restart Claude Desktop:
 ```
 
 **Other clients** that use Streamable HTTP: the URL is
-`https://<your instance>/api/mcp`, with the header
+`https://<your instance>/api/mcp`. A client that supports OAuth with dynamic
+client registration signs in by itself. Otherwise, send the header
 `Authorization: Bearer <token>`.
 
 The tools:
@@ -172,9 +181,10 @@ The tools:
 - `create_drawing` makes a new drawing in your private space or in Team,
   optionally in a folder, from simple shapes and arrows or a Mermaid flowchart.
 
-A token acts as you: it sees what you see. It can create drawings, but it
-cannot change or delete drawings that exist. Revoke a token under Settings at
-any time. When an admin deletes a member, that member's tokens stop working.
+A token or a connected app acts as you: it sees what you see. It can create
+drawings, but it cannot change or delete drawings that exist. Revoke a token
+or disconnect an app under Settings at any time. When an admin deletes a
+member, that member's tokens and apps stop working.
 
 ## Stack
 

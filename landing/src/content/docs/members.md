@@ -32,9 +32,9 @@ If no admin can sign in, see [Recover admin access](/docs/admin-recovery/).
 
 Deleting a member permanently deletes their account and their private drawings
 and folders. This cannot be undone. Their Team drawings stay, and their
-[access tokens](/docs/mcp/#access) stop working. If they can sign in with
-[single sign-on](/docs/single-sign-on/#who-gets-in), remove them in your
-provider too, or they can come back.
+[access tokens and connected apps](/docs/mcp/#access) stop working. If they
+can sign in with [single sign-on](/docs/single-sign-on/#who-gets-in), remove
+them in your provider too, or they can come back.
 
 ## Your own account
 

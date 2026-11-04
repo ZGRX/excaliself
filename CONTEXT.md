@@ -76,3 +76,6 @@ The instance's one set of reusable shapes and icons, shown in the editor's Libra
 
 ### Access token
 A secret a member makes under Settings so their own AI client can use the instance over MCP (`/api/mcp`). It acts as that member under the same Space rule: it can find, read, and create Drawings, but never change or delete one, since a shared or Team Drawing has its Room as the only writer (Handoff). Shown once, when made. Revoking it, or deleting its member, ends it at once. Not a Share link: it opens no Room and has no Audience.
+
+### Connected app
+An AI client, such as a Claude.ai connector, that a member let in through OAuth instead of an Access token: the client asks, the member signs in and clicks Allow. Same access and same limits as an Access token. Listed beside the tokens in Settings, where the member disconnects it; disconnecting, or deleting its member, ends it at once.

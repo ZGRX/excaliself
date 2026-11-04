@@ -13,7 +13,8 @@ Email and password sign-in and invites keep working.
 - **Existing members** sign in with any provider whose email matches their
   account. The first SSO sign-in links it, removes the account's password
   and any other SSO link, signs out its other sessions, and revokes its
-  [access tokens](/docs/mcp/#access): nobody verified the email behind those.
+  [access tokens and connected apps](/docs/mcp/#access): nobody verified the
+  email behind those.
   An admin can give the password back with a
   [reset link](/docs/members/#reset-a-password). A first sign-in with a
   second provider does the same to the first provider's link.

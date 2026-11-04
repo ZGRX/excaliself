@@ -70,7 +70,7 @@ vi.mock("@/features/auth/sso", async (importOriginal) => {
 })
 
 const { auth } = await import("./auth")
-const { accessTokens } = await import("@/db/schema")
+const { accessTokens, oauthGrants } = await import("@/db/schema")
 const { rooms } = await import("@/features/collab/room-registry")
 const { joinRoom, receiveFromPeer } = await import(
   "@/features/collab/room-session"
@@ -123,7 +123,7 @@ test("linking SSO to a password account ends its password, sessions and tokens",
 
   expect(rows("account").map((row) => row.providerId)).toEqual([])
   expect(rows("session")).toEqual([])
-  expect(drizzleDeletes).toEqual([accessTokens])
+  expect(drizzleDeletes).toEqual([accessTokens, oauthGrants])
 })
 
 const cookieOf = (headers: Headers) =>

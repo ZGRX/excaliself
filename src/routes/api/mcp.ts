@@ -1,16 +1,21 @@
 // The MCP endpoint (Streamable HTTP) a member's AI client connects to.
 //
-// Auth is an access token only, never the session cookie: another site can
+// Auth is a bearer token only, never the session cookie: another site can
 // make a browser send the cookie, but it can't know a token. That is also
-// why no Origin check is needed.
+// why no Origin check is needed. The token is a static access token from
+// Settings, or an OAuth access token (features/oauth). The 401 points OAuth
+// clients at the discovery metadata.
 
 import { createMcpHandler } from "@modelcontextprotocol/server"
 import { createFileRoute } from "@tanstack/react-router"
 import { db } from "@/db"
-import { env } from "@/env"
 import { memberForToken } from "@/features/access-tokens/tokens"
 import { createMcpServer, type Member } from "@/features/mcp/tools"
-import { resolveOrigin } from "@/lib/site-origin"
+import {
+  originOf,
+  protectedResourceMetadataUrl,
+} from "@/features/oauth/endpoints"
+import { memberForOAuthToken } from "@/features/oauth/grants"
 
 type Caller = { member: Member; origin: string }
 
@@ -22,37 +27,44 @@ const handler = createMcpHandler(({ authInfo }) => {
   return createMcpServer(db, member, origin)
 })
 
-function unauthorized(): Response {
+// RFC 9728 §5.1. error="invalid_token" only when a token was sent (RFC 6750).
+function unauthorized(origin: string, sentToken: boolean): Response {
+  const metadata = `resource_metadata="${protectedResourceMetadataUrl(origin)}"`
   return Response.json(
     {
       error: "invalid_token",
       error_description:
-        "Send an Excaliself access token as Authorization: Bearer <token>. Make one in Settings, under Access tokens.",
+        "Sign in with OAuth, or send an Excaliself access token as Authorization: Bearer <token>. Make one in Settings, under MCP.",
     },
     {
       status: 401,
-      headers: { "WWW-Authenticate": 'Bearer realm="excaliself"' },
+      headers: {
+        "WWW-Authenticate": sentToken
+          ? `Bearer error="invalid_token", ${metadata}`
+          : `Bearer ${metadata}`,
+      },
     },
   )
 }
 
 export async function mcpHandler(request: Request): Promise<Response> {
+  const origin = originOf(request)
   const token = request.headers
     .get("authorization")
     ?.match(/^Bearer\s+(\S+)$/i)?.[1]
-  const member = token ? await memberForToken(db, token) : null
-  if (!token || !member) return unauthorized()
+  if (!token) return unauthorized(origin, false)
+  const staticMember = await memberForToken(db, token)
+  const member = staticMember ?? (await memberForOAuthToken(db, token))
+  if (!member) return unauthorized(origin, true)
 
-  const caller: Caller = {
-    member,
-    origin: resolveOrigin({
-      baseUrl: env.BASE_URL,
-      headers: request.headers,
-      requestUrl: request.url,
-    }),
-  }
+  const caller: Caller = { member, origin }
   return handler.fetch(request, {
-    authInfo: { token, clientId: "access-token", scopes: [], extra: caller },
+    authInfo: {
+      token,
+      clientId: staticMember ? "access-token" : "oauth",
+      scopes: [],
+      extra: caller,
+    },
   })
 }
 

@@ -69,8 +69,9 @@ export const auth = betterAuth({
         // A new SSO link proves who owns the email now. Older ways in did
         // not: an invitee could type a colleague's address, or a member could
         // change to it with an SSO link kept. So linking SSO ends the
-        // password, other SSO links, all sessions and access tokens, before
-        // the SSO session is made. An admin reset link gives a password back.
+        // password, other SSO links, all sessions, access tokens and OAuth
+        // apps, before the SSO session is made. An admin reset link gives a
+        // password back.
         // After the insert: a failed insert keeps the old login, and of two
         // links racing to one account, the later cleanup removes the other.
         after: async (account, ctx) => {
@@ -85,6 +86,9 @@ export const auth = betterAuth({
           await db
             .delete(schema.accessTokens)
             .where(eq(schema.accessTokens.userId, account.userId))
+          await db
+            .delete(schema.oauthGrants)
+            .where(eq(schema.oauthGrants.userId, account.userId))
           // Open sockets checked the session only when they joined.
           await evictUser(rooms, account.userId)
         },
