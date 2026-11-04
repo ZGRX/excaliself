@@ -132,6 +132,7 @@ export async function importDrawing(
     name: string
     folderId: string | null
     space: Space
+    lastModified: number
     content: SceneContent
   },
 ): Promise<{ skippedImages: number }> {
@@ -143,13 +144,14 @@ export async function importDrawing(
       ? await assertFolderTarget(tx, userId, input.folderId)
       : input.space
     const now = new Date()
+    const importedAt = new Date(Math.min(input.lastModified, now.getTime()))
     await insertPreparedDrawing(tx, prepared, {
       name: input.name,
       folderId: input.folderId,
       space,
       createdBy: userId,
-      createdAt: now,
-      updatedAt: now,
+      createdAt: importedAt,
+      updatedAt: importedAt,
     })
     return { skippedImages: prepared.skippedImages }
   })

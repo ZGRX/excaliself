@@ -77,6 +77,7 @@ test("a dropped file lands in the folder's space, with its images", async () => 
     name: "Dropped",
     folderId: "demo-architecture",
     space: "private",
+    lastModified: Date.now(),
     content: content([image("img")], {
       img: { mimeType: "image/png", dataURL: PNG },
     }),
@@ -98,6 +99,44 @@ test("a dropped file lands in the folder's space, with its images", async () => 
   expect(files).toEqual([{ fileId: "img" }])
 })
 
+test("a dropped file keeps its last modified date for both drawing timestamps", async () => {
+  const lastModified = new Date("2020-01-02T03:04:05.000Z").getTime()
+  await importDrawing(db, demoAdmin.id, {
+    name: "Old file",
+    folderId: null,
+    space: "private",
+    lastModified,
+    content: content([]),
+  })
+
+  const [drawing] = await db
+    .select({ createdAt: drawings.createdAt, updatedAt: drawings.updatedAt })
+    .from(drawings)
+    .where(eq(drawings.name, "Old file"))
+  expect(drawing.createdAt.getTime()).toBe(lastModified)
+  expect(drawing.updatedAt.getTime()).toBe(lastModified)
+})
+
+test("a future file date is clamped to the import time", async () => {
+  const before = Date.now()
+  await importDrawing(db, demoAdmin.id, {
+    name: "Future file",
+    folderId: null,
+    space: "private",
+    lastModified: before + 24 * 60 * 60 * 1000,
+    content: content([]),
+  })
+  const after = Date.now()
+
+  const [drawing] = await db
+    .select({ createdAt: drawings.createdAt, updatedAt: drawings.updatedAt })
+    .from(drawings)
+    .where(eq(drawings.name, "Future file"))
+  expect(drawing.createdAt.getTime()).toBeGreaterThanOrEqual(before)
+  expect(drawing.createdAt.getTime()).toBeLessThanOrEqual(after)
+  expect(drawing.updatedAt).toEqual(drawing.createdAt)
+})
+
 test("a dropped file can't go into someone else's private folder", async () => {
   await db
     .insert(users)
@@ -108,6 +147,7 @@ test("a dropped file can't go into someone else's private folder", async () => {
       name: "Sneaky",
       folderId: "demo-product",
       space: "private",
+      lastModified: Date.now(),
       content: content([]),
     }),
   ).rejects.toThrow("Folder not found")
