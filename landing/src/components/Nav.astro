@@ -63,6 +63,9 @@ const underline = (seed: number) => line([[0, 4], [100, 4]], { seed, stroke: pen
     ))}
     <a href={repo} class="flex items-center gap-3 py-4 text-4xl font-semibold tracking-tight">
       GitHub
+      <span class="text-lg">
+        <StarCount />
+      </span>
       <Icon name="arrow-up-right" size={28} />
     </a>
   </nav>
