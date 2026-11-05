@@ -1,6 +1,12 @@
 import { hashPassword } from "better-auth/crypto"
+import { hashToken } from "@/features/access-tokens/tokens"
 import { extractSceneText } from "@/features/drawings/search"
-import { demoAdmin, demoDrawings, demoFolders } from "./demo-content.ts"
+import {
+  demoAccessToken,
+  demoAdmin,
+  demoDrawings,
+  demoFolders,
+} from "./demo-content.ts"
 import type { Db } from "./index.ts"
 import * as schema from "./schema.ts"
 
@@ -25,9 +31,19 @@ export async function insertPreviewUser(db: Db, user: PreviewUser) {
   })
 }
 
-/** An admin, so the instance is past /setup, and drawings to fill Home. */
+/**
+ * An admin, so the instance is past /setup, with a public MCP token, and
+ * drawings to fill Home.
+ */
 export async function seedDemoContent(db: Db) {
   await insertPreviewUser(db, { ...demoAdmin, role: "admin" })
+  await db.insert(schema.accessTokens).values({
+    id: "demo-access-token",
+    userId: demoAdmin.id,
+    name: "Preview (public)",
+    tokenHash: hashToken(demoAccessToken),
+    start: demoAccessToken.slice(0, 8),
+  })
   // Parents come first in demoFolders, so one insert satisfies the self-FK.
   await db
     .insert(schema.folders)

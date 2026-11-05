@@ -32,6 +32,9 @@ export const demoAdmin = {
   password: "preview-password",
 }
 
+/** A public MCP access token for demoAdmin, so inspectors can list tools. */
+export const demoAccessToken = "exs_preview-mode-public-token"
+
 export const demoFolders: DemoFolder[] = [
   { id: "demo-product", name: "Product", space: "private", parentId: null },
   {

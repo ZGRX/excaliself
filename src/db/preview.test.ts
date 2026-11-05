@@ -1,13 +1,19 @@
 // @vitest-environment node
+import { PGlite } from "@electric-sql/pglite"
 import { verifyPassword } from "better-auth/crypto"
 import { eq } from "drizzle-orm"
+import { drizzle } from "drizzle-orm/pglite"
+import { migrate } from "drizzle-orm/pglite/migrator"
 import { beforeAll, expect, test } from "vitest"
+import { memberForToken } from "@/features/access-tokens/tokens"
 import { bytesToDataUrl } from "@/features/drawings/file-bytes"
 import { moveToTeam } from "@/features/spaces/move-to-team"
 import { purgeExpiredTrash } from "@/features/trash/purge"
-import { demoAdmin } from "./demo-content"
+import { demoAccessToken, demoAdmin } from "./demo-content"
 import type { Db } from "./index"
 import { createPreviewDb } from "./preview"
+import { insertPreviewUser } from "./preview-seed"
+import * as schema from "./schema"
 import { accounts, drawingFiles, users } from "./schema"
 
 let db: Db
@@ -29,6 +35,19 @@ test("runs the migrations and seeds an admin who can sign in", async () => {
     }),
   ).toBe(true)
 })
+
+// The token is seeded data, not code: a database preview mode did not seed,
+// as every real instance's, refuses it even for the same admin.
+test("the public MCP token works only in the preview database", async () => {
+  expect(await memberForToken(db, demoAccessToken)).toMatchObject({
+    id: demoAdmin.id,
+  })
+
+  const unseeded = drizzle({ client: new PGlite(), schema })
+  await migrate(unseeded, { migrationsFolder: "./drizzle" })
+  await insertPreviewUser(unseeded, { ...demoAdmin, role: "admin" })
+  expect(await memberForToken(unseeded, demoAccessToken)).toBeNull()
+}, 30_000)
 
 test("reads bytea back as a Buffer", async () => {
   await db.insert(drawingFiles).values({

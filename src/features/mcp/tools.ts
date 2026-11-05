@@ -266,7 +266,7 @@ export function createMcpServer(db: Db, member: Member, origin: string) {
 
 Elements: shapes ("rectangle", "ellipse", "diamond") with an optional label; "text"; and "arrow" or "line" connectors that join shapes by id ("from", "to") or run between points ("start", "end"). Shapes and text without x/y are laid out automatically, in "direction", with arrows routed between them; labels wrap and shapes grow to fit. Auto-layout gives the cleanest diagrams: give x/y (top-left, pixels, y grows down) only for layouts a graph can't express, such as grids or timelines. Keep arrow labels to a few words; put detail in shape labels or a text note.
 
-Mermaid: a "flowchart"/"graph" diagram, with node shapes, edge labels, dotted and thick edges, and subgraphs (drawn as titled boxes). Other Mermaid diagram types are not supported. Both can be sent at once: they are laid out together, and arrows may join flowchart nodes by their Mermaid ids. Up to ${MAX_ELEMENTS} elements in all, Mermaid nodes and edges included.
+Mermaid: a "flowchart"/"graph" diagram, with node shapes, edge labels, dotted and thick edges, subgraphs (drawn as titled boxes), and node colors from "style id fill:#a5d8ff,stroke:#1971c2" lines (hex or named colors) (classDef and class are ignored). Other Mermaid diagram types are not supported. Both can be sent at once: they are laid out together, and arrows may join flowchart nodes by their Mermaid ids. Up to ${MAX_ELEMENTS} elements in all, Mermaid nodes and edges included.
 
 Colors: Excalidraw's palette reads best, e.g. backgrounds "#a5d8ff" (blue), "#b2f2bb" (green), "#ffec99" (yellow), "#ffc9c9" (red), "#d0bfff" (violet), "#e9ecef" (gray).`,
       inputSchema: z.object({

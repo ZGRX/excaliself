@@ -18,8 +18,10 @@ docker run --rm -p 127.0.0.1:3000:3000 -e PREVIEW_MODE=true ghcr.io/maciekzygmun
 Open `http://localhost:3000/preview/login` to sign in as the admin, with
 example drawings. To test live collaboration, open
 `http://localhost:3000/preview/login?account=new` in a second browser: it signs
-in as a new member. Data lives in memory and is gone when the container stops.
-See [preview mode](/docs/environment/#previews).
+in as a new member. To try an AI client, use the
+[preview MCP token](/docs/mcp/#try-it-in-preview-mode). Data lives in memory
+and is gone when the container stops. See
+[preview mode](/docs/environment/#previews).
 
 ## Install
 

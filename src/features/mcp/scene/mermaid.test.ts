@@ -27,6 +27,26 @@ test("reads nodes, their shapes and labels, and labeled edges", () => {
   ])
 })
 
+test("style lines color their node", () => {
+  const { elements } = parseMermaid(`flowchart TD
+    style a fill:#a5d8ff,stroke:#1971c2,stroke-width:2px
+    a --> b
+    style b fill:url(x)
+    style ghost fill:#fff
+    style`)
+
+  expect(elements.slice(0, 2)).toEqual([
+    {
+      type: "rectangle",
+      id: "a",
+      label: "a",
+      backgroundColor: "#a5d8ff",
+      strokeColor: "#1971c2",
+    },
+    { type: "rectangle", id: "b", label: "b" },
+  ])
+})
+
 test("edge syntax sets the stroke and arrowheads", () => {
   const edges = parseMermaid(`graph TD
     a --> b

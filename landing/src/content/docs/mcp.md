@@ -72,6 +72,21 @@ For clients that use Streamable HTTP, the URL is
 dynamic client registration signs in by itself. Otherwise, send the header
 `Authorization: Bearer <token>`.
 
+## Try it in preview mode
+
+In [preview mode](/docs/environment/#previews), the instance has a public
+access token for the example admin: `exs_preview-mode-public-token`. Use it
+to try a client, or to let an MCP inspector list the tools, with no sign-in:
+
+```bash
+docker run -d --rm --name excaliself-preview -p 127.0.0.1:3000:3000 -e PREVIEW_MODE=true ghcr.io/maciekzygmunt/excaliself
+claude mcp add --transport http excaliself-preview http://localhost:3000/api/mcp \
+  --header "Authorization: Bearer exs_preview-mode-public-token"
+```
+
+Only preview mode makes this token. Other instances refuse it. Stop the
+preview with `docker stop excaliself-preview`.
+
 ## Tools
 
 - `list_drawings`, `search_drawings`, and `list_folders` find drawings, with
@@ -80,6 +95,7 @@ dynamic client registration signs in by itself. Otherwise, send the header
   connect. It does not send the raw Excalidraw JSON.
 - `create_drawing` makes a new drawing in your private space or in Team,
   optionally in a folder, from simple shapes and arrows or a Mermaid flowchart.
+  Mermaid `style` lines color the nodes (`fill` and `stroke`, as hex or named colors).
 - `create_folder` makes a folder in your private space or in Team, optionally
   inside another folder.
 - `move_drawing` moves a drawing into a folder, or to the top of its space. A

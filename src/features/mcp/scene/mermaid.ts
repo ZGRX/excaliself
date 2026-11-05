@@ -1,7 +1,8 @@
 // Mermaid flowcharts as scene skeletons. Mermaid's own parser renders with a
 // browser DOM, so this reads the flowchart syntax itself: nodes and their
-// shapes, edges and their labels and styles, and subgraphs. Styling lines
-// (classDef, style, click, ...) are skipped.
+// shapes, edges and their labels and styles, and subgraphs. A `style` line
+// gives a node its fill and stroke colors; other styling lines (classDef,
+// click, ...) are skipped.
 
 import {
   type Cluster,
@@ -33,6 +34,9 @@ const NODE_SHAPES: [open: string, close: string, shape: Shape][] = [
   [">", "]", "rectangle"],
 ]
 
+// `style id fill:#a5d8ff,stroke:#1971c2,stroke-width:2px`
+const STYLE = /^style\s+(\S+)\s+(.+)$/
+const COLOR = /^(#[0-9a-f]{3,8}|[a-z]{1,20})$/i
 const SKIPPED =
   /^(classDef|class|style|linkStyle|click|accTitle|accDescr|direction)\b/
 const NODE_ID = /^[\p{L}\p{N}_]+(?:[-.][\p{L}\p{N}_]+)*/u
@@ -72,6 +76,7 @@ export function parseMermaid(source: string): SceneGraph {
   // mentions it, so inner subgraphs claim theirs before outer ones.
   const open: { cluster: Cluster; mentioned: Set<string> }[] = []
   const claimed = new Set<string>()
+  const styles: [id: string, props: string][] = []
 
   const addNode = (id: string, label?: string, type?: Shape) => {
     open.at(-1)?.mentioned.add(id)
@@ -85,6 +90,8 @@ export function parseMermaid(source: string): SceneGraph {
   }
 
   for (const statement of statements) {
+    const style = statement.match(STYLE)
+    if (style) styles.push([style[1], style[2]])
     if (SKIPPED.test(statement)) continue
     const subgraph = statement.match(/^subgraph\s+(.+)$/)
     if (subgraph) {
@@ -130,6 +137,16 @@ export function parseMermaid(source: string): SceneGraph {
     throw new SceneInputError(
       `Mermaid: subgraph "${open[0].cluster.id}" has no "end".`,
     )
+  }
+  for (const [id, props] of styles) {
+    const shape = shapes.get(id)
+    if (!shape) continue
+    for (const prop of props.split(",")) {
+      const [key, value = ""] = prop.split(":").map((part) => part.trim())
+      if (!COLOR.test(value)) continue
+      if (key === "fill") shape.backgroundColor = value
+      if (key === "stroke") shape.strokeColor = value
+    }
   }
   for (const cluster of clusters) {
     shapes.delete(cluster.id)
