@@ -147,13 +147,21 @@ function parseSceneData(raw: string | undefined | null): {
   }
 }
 
+/** A canvas to open content in; `offsets` keep it clear of the UI on top. */
+export type FitTo = {
+  width: number
+  height: number
+  offsets?: { top: number; right: number; bottom: number; left: number }
+}
+
 /**
  * `fitTo` opens the view centered on the content, zoomed out to fit that
- * viewport. Saved scenes carry no scroll or zoom, so it opens at the origin.
+ * canvas, but never past 100%. Saved scenes carry no scroll or zoom, so
+ * without it the view opens at the origin.
  */
 export function buildInitialSceneData(
   drawing: { data: string; files?: PersistedFile[] | null } | null | undefined,
-  fitTo?: { width: number; height: number },
+  fitTo?: FitTo,
 ): { initialData: ExcalidrawInitialDataState; isDataCorrupt: boolean } {
   const files = toBinaryFiles(drawing?.files)
   const { parsed, isCorrupt } = parseSceneData(drawing?.data)
@@ -169,10 +177,18 @@ export function buildInitialSceneData(
   restored.appState.collaborators = new Map()
   const elements = fitTo ? getNonDeletedElements(restored.elements) : []
   if (fitTo && elements.length > 0) {
+    const { width, height, offsets } = fitTo
     // Without fitToViewport it never zooms in past 100%.
     const { scrollX, scrollY, zoom } = zoomToFitBounds({
-      appState: { ...restored.appState, ...fitTo, offsetTop: 0, offsetLeft: 0 },
+      appState: {
+        ...restored.appState,
+        width,
+        height,
+        offsetTop: 0,
+        offsetLeft: 0,
+      },
       bounds: getCommonBounds(elements),
+      canvasOffsets: offsets,
       fitToViewport: false,
       viewportZoomFactor: 0.9,
     }).appState
@@ -181,11 +197,11 @@ export function buildInitialSceneData(
   return { initialData: { ...restored, files }, isDataCorrupt: isCorrupt }
 }
 
-export function useDrawingScene(id: string) {
+export function useDrawingScene(id: string, fitTo?: FitTo) {
   const { data: drawing } = useQuery(drawingQueryOptions(id))
   const scene = useMemo(
-    () => (drawing ? buildInitialSceneData(drawing) : null),
-    [drawing],
+    () => (drawing ? buildInitialSceneData(drawing, fitTo) : null),
+    [drawing, fitTo],
   )
   return {
     drawing,

@@ -37,6 +37,7 @@ import {
 } from "@/features/drawings/queries"
 import {
   buildScenePayload,
+  type FitTo,
   getScenePayloadSignature,
   selectOversizedImages,
   useDrawingScene,
@@ -68,6 +69,8 @@ const SHARE_LABEL_CLASS = "@max-6xl/canvas:hidden"
 const SHARE_MENU_ITEM_CLASS = "@5xl/canvas:hidden!"
 const PRESENCE_CLASS = "@max-[77rem]/canvas:hidden"
 const PRESENCE_MENU_ROW_CLASS = "@min-[77rem]/canvas:hidden!"
+// Room around fitted content; the top clears the toolbar, as Shift+1 does.
+const FIT_OFFSETS = { top: 80, right: 16, bottom: 16, left: 16 }
 
 type Props = {
   drawingId: string
@@ -90,7 +93,20 @@ export function DrawingCanvas({
   const { toggleSidebar } = useSidebar()
   const canvasTheme = useCanvasTheme()
 
-  const { drawing, initialData, isDataCorrupt } = useDrawingScene(drawingId)
+  // The canvas opens fitted to its content, so it waits for its own size.
+  const [fitTo, setFitTo] = useState<FitTo>()
+  const measureCanvas = useCallback((node: HTMLDivElement | null) => {
+    if (node)
+      setFitTo({
+        width: node.clientWidth,
+        height: node.clientHeight,
+        offsets: FIT_OFFSETS,
+      })
+  }, [])
+  const { drawing, initialData, isDataCorrupt } = useDrawingScene(
+    drawingId,
+    fitTo,
+  )
   // `useRoom` needs a stable reference.
   const storedFileIds = useMemo(
     () => (drawing?.files ?? []).map((file) => file.fileId),
@@ -325,6 +341,7 @@ export function DrawingCanvas({
   }
 
   if (!drawing || !initialData) return null
+  if (!fitTo) return <div ref={measureCanvas} className="size-full" />
 
   return (
     <div className="@container/canvas relative size-full">
