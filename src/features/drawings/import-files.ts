@@ -55,6 +55,7 @@ export function useImportDrawingFiles() {
             data: {
               name: drawingName(file.name),
               ...target,
+              lastModified: file.lastModified,
               content: JSON.parse(json),
             },
           })

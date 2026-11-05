@@ -103,6 +103,7 @@ export const importDrawingFile = createServerFn({ method: "POST" })
       folderId: z.string().nullable(),
       // Ignored inside a folder: the drawing takes the folder's space.
       space: z.enum(spaces),
+      lastModified: z.number().int().nonnegative(),
       content: sceneContentSchema,
     }),
   )

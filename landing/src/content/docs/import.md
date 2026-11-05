@@ -24,3 +24,5 @@ Add `.excalidraw` files from your computer under **Settings**, then **Import**.
 They go to Private. PNG and SVG exports that include the scene work too.
 
 To put files in a folder or in Team, drop them on it in the sidebar.
+Imported drawings keep each file's last modified date in Recent. If a file's
+date is in the future, the import time is used instead.
