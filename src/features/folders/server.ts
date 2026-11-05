@@ -1,6 +1,5 @@
 "use server"
 
-import { randomUUID } from "node:crypto"
 import { createServerFn } from "@tanstack/react-start"
 import { and, eq, inArray, isNull } from "drizzle-orm"
 import { z } from "zod"
@@ -8,14 +7,12 @@ import { db } from "@/db"
 import { drawings, folders, spaces } from "@/db/schema"
 import { userDisplayName } from "@/features/account/display-name"
 import { endTrashedRooms } from "@/features/collab/room-registry"
-import {
-  folderColumns,
-  MAX_NAME_LENGTH,
-} from "@/features/drawings/list-columns"
+import { MAX_NAME_LENGTH } from "@/features/drawings/list-columns"
 import { accessibleTo } from "@/features/spaces/access"
 import { restoreFolderUnit } from "@/features/trash/restore"
 import { authMiddleware } from "@/middleware/auth"
 import { listsChangedMiddleware } from "@/middleware/lists-changed"
+import { insertFolder } from "./create"
 import { listFolders } from "./list"
 import { assertFolderTarget } from "./ownership"
 import { collectFolderSubtreeIds } from "./subtree"
@@ -37,32 +34,13 @@ export const createFolder = createServerFn({ method: "POST" })
       space: z.enum(spaces).default("private"),
     }),
   )
-  .handler(async ({ data, context }) => {
-    const userId = context.session.user.id
-    const id = randomUUID()
-    const now = new Date()
-    const parentId = data.parentId ?? null
-
-    return db.transaction(async (tx) => {
-      await lockFolderTree(tx, "place")
-      const space = parentId
-        ? await assertFolderTarget(tx, userId, parentId)
-        : data.space
-      const [folder] = await tx
-        .insert(folders)
-        .values({
-          id,
-          name: data.name,
-          space,
-          createdBy: userId,
-          parentId,
-          createdAt: now,
-          updatedAt: now,
-        })
-        .returning(folderColumns)
-      return folder
-    })
-  })
+  .handler(({ data, context }) =>
+    insertFolder(db, context.session.user.id, {
+      name: data.name,
+      parentId: data.parentId ?? null,
+      space: data.space,
+    }),
+  )
 
 export const updateFolder = createServerFn({ method: "POST" })
   .middleware([authMiddleware, listsChangedMiddleware])

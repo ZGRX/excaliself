@@ -80,10 +80,15 @@ dynamic client registration signs in by itself. Otherwise, send the header
   connect. It does not send the raw Excalidraw JSON.
 - `create_drawing` makes a new drawing in your private space or in Team,
   optionally in a folder, from simple shapes and arrows or a Mermaid flowchart.
+- `create_folder` makes a folder in your private space or in Team, optionally
+  inside another folder.
+- `move_drawing` moves a drawing into a folder, or to the top of its space. A
+  drawing cannot move between your private space and Team.
 
 ## Access
 
 A token or a connected app acts as you: it sees what you see. It can create
-drawings, but it cannot change or delete drawings that exist. Under
+drawings and folders, and move drawings between folders. It cannot change what
+is in a drawing, and it cannot delete anything. Under
 **Settings**, then **MCP**, revoke a token or disconnect an app at any time.
 When an admin deletes a member, that member's tokens and apps stop working.

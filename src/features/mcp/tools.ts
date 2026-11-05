@@ -1,7 +1,7 @@
 // The MCP server one member's AI client talks to: find, read, and create
-// drawings, under the same Space rule as that member's browser. Editing an
-// existing drawing is left out: shared and Team drawings are written only by
-// their Room (ADR 0002).
+// drawings, create folders, and move drawings between folders, under the same
+// Space rule as that member's browser. Editing a drawing's scene is left out:
+// shared and Team drawings are written only by their Room (ADR 0002).
 
 import { McpServer } from "@modelcontextprotocol/server"
 import { and, eq, isNull } from "drizzle-orm"
@@ -14,6 +14,8 @@ import { roomElements } from "@/features/collab/room-session"
 import { insertDrawing } from "@/features/drawings/create"
 import { listDrawings } from "@/features/drawings/list"
 import { matchDrawing, parseSceneElements } from "@/features/drawings/search"
+import { updateDrawingFields } from "@/features/drawings/update"
+import { insertFolder } from "@/features/folders/create"
 import { listFolders } from "@/features/folders/list"
 import { folderPaths } from "@/features/folders/subtree"
 import { listUpdates } from "@/features/list-updates/hub"
@@ -70,7 +72,7 @@ export function createMcpServer(db: Db, member: Member, origin: string) {
     {
       // Bounds the work one create_drawing call can ask for.
       maxToolInputElements: 20_000,
-      instructions: `Excaliself is a self-hosted Excalidraw. You act as ${userDisplayName(member)}. Every drawing and folder lives in a Space: "private" (only this member sees it) or "team" (every member sees it). You can find, read, and create drawings; you can't change or delete existing ones.`,
+      instructions: `Excaliself is a self-hosted Excalidraw. You act as ${userDisplayName(member)}. Every drawing and folder lives in a Space: "private" (only this member sees it) or "team" (every member sees it). You can find, read, and create drawings, create folders, and move drawings between folders of one Space. You can't change what is in a drawing, and you can't delete anything.`,
     },
   )
   const drawingUrl = (id: string) => `${origin}/draw/${id}`
@@ -255,7 +257,7 @@ export function createMcpServer(db: Db, member: Member, origin: string) {
     "create_drawing",
     {
       title: "Create drawing",
-      description: `Creates a NEW drawing from simple elements and/or a Mermaid flowchart, and returns its link. Existing drawings can't be changed.
+      description: `Creates a NEW drawing from simple elements and/or a Mermaid flowchart, and returns its link. What is in an existing drawing can't be changed.
 
 Elements: shapes ("rectangle", "ellipse", "diamond") with an optional label; "text"; and "arrow" or "line" connectors that join shapes by id ("from", "to") or run between points ("start", "end"). Shapes and text without x/y are laid out automatically, in "direction", with arrows routed between them; labels wrap and shapes grow to fit. Auto-layout gives the cleanest diagrams: give x/y (top-left, pixels, y grows down) only for layouts a graph can't express, such as grids or timelines. Keep arrow labels to a few words; put detail in shape labels or a text note.
 
@@ -319,6 +321,94 @@ Colors: Excalidraw's palette reads best, e.g. backgrounds "#a5d8ff" (blue), "#b2
         elements: elements.length,
         url: drawingUrl(created.id),
       })
+    },
+  )
+
+  server.registerTool(
+    "create_folder",
+    {
+      title: "Create folder",
+      description:
+        "Creates a folder, at the top of a Space or inside another folder. Put drawings in it with create_drawing or move_drawing.",
+      inputSchema: z.object({
+        name: z.string().trim().min(1).max(200),
+        space: space
+          .default("private")
+          .describe(
+            'Default "private". Ignored with parentId: a folder takes its parent\'s Space.',
+          ),
+        parentId: z
+          .string()
+          .optional()
+          .describe("Put it inside this folder (see list_folders)."),
+      }),
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: false,
+      },
+    },
+    async ({ name, space, parentId }) => {
+      const folder = await insertFolder(db, member.id, {
+        name,
+        parentId: parentId ?? null,
+        space,
+      })
+      listUpdates.notify()
+      const paths = folderPaths(await listFolders(db, member.id))
+      return json({
+        id: folder.id,
+        path: paths.get(folder.id) ?? folder.name,
+        space: folder.space,
+      })
+    },
+  )
+
+  server.registerTool(
+    "move_drawing",
+    {
+      title: "Move drawing",
+      description:
+        "Moves a drawing into a folder, or to the top of its Space. The folder must be in the drawing's Space: a drawing can't move between Spaces.",
+      inputSchema: z.object({
+        id: z
+          .string()
+          .describe("A drawing id from list_drawings or search_drawings."),
+        // Optional, not nullable: some clients reject a ["string", "null"] type.
+        folderId: z
+          .string()
+          .optional()
+          .describe(
+            "A folder id from list_folders. Leave it out to move the drawing to the top of its Space.",
+          ),
+      }),
+      annotations: {
+        readOnlyHint: false,
+        // Per the MCP spec, false means additive only; a move rewrites folderId.
+        destructiveHint: true,
+        // A repeat still refreshes updatedAt, so the drawing jumps up the lists.
+        idempotentHint: false,
+      },
+    },
+    async ({ id, folderId }) => {
+      try {
+        await updateDrawingFields(db, member.id, id, {
+          folderId: folderId ?? null,
+        })
+      } catch (error) {
+        // The engine can't tell a hidden drawing from a Space mismatch.
+        if (error instanceof Error && error.message === "Drawing not found") {
+          throw new Error(
+            "No drawing has that id, or the folder is in the other Space. Find ids with list_drawings and list_folders.",
+          )
+        }
+        throw error
+      }
+      listUpdates.notify()
+      const folder = folderId
+        ? folderPaths(await listFolders(db, member.id)).get(folderId)
+        : undefined
+      return json({ id, folder: folder ?? null, url: drawingUrl(id) })
     },
   )
 
