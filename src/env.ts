@@ -37,6 +37,11 @@ export const env = createEnv({
     // Comma-separated host patterns a preview answers on, e.g.
     // "*.draw.example.com". Auth refuses any other host.
     PREVIEW_HOSTS: list(),
+    // MCP over stdin/stdout (server/plugins/mcp-stdio.ts). It has no sign-in
+    // and acts as the preview admin, so a real database must never get it.
+    MCP_STDIO: previewMode
+      ? flag()
+      : flag().refine((on) => !on, "MCP_STDIO=true needs PREVIEW_MODE=true"),
     // Single sign-on. A provider is on when its client ID is set. See
     // https://excaliself.com/docs/single-sign-on/
     GOOGLE_CLIENT_ID: z.string().optional(),

@@ -87,6 +87,37 @@ claude mcp add --transport http excaliself-preview http://localhost:3000/api/mcp
 Only preview mode makes this token. Other instances refuse it. Stop the
 preview with `docker stop excaliself-preview`.
 
+### Over stdio
+
+With `MCP_STDIO=true`, the preview also serves MCP on its standard input and
+output, so your client starts the container itself and stops it when it
+quits. For Claude Code:
+
+```bash
+claude mcp add excaliself-preview -- docker run -i --rm -p 127.0.0.1:3000:3000 -e PREVIEW_MODE=true -e MCP_STDIO=true ghcr.io/maciekzygmunt/excaliself
+```
+
+For Claude Desktop, in `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "excaliself-preview": {
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm", "-p", "127.0.0.1:3000:3000",
+        "-e", "PREVIEW_MODE=true", "-e", "MCP_STDIO=true",
+        "ghcr.io/maciekzygmunt/excaliself"
+      ]
+    }
+  }
+}
+```
+
+The client acts as the example admin. To watch its drawings appear live,
+open `http://localhost:3000/preview/login`. Without the `-p` option, the
+client still works, but you can't open the app.
+
 ## Tools
 
 - `list_drawings`, `search_drawings`, and `list_folders` find drawings, with
