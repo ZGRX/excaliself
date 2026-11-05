@@ -1,21 +1,21 @@
 "use server"
 
 import { createServerFn } from "@tanstack/react-start"
-import { and, eq, inArray, isNull } from "drizzle-orm"
+import { and, eq, isNull } from "drizzle-orm"
 import { z } from "zod"
 import { db } from "@/db"
-import { drawings, folders, spaces } from "@/db/schema"
+import { folders, spaces } from "@/db/schema"
 import { userDisplayName } from "@/features/account/display-name"
 import { endTrashedRooms } from "@/features/collab/room-registry"
 import { MAX_NAME_LENGTH } from "@/features/drawings/list-columns"
 import { accessibleTo } from "@/features/spaces/access"
 import { restoreFolderUnit } from "@/features/trash/restore"
+import { trashFolderUnit } from "@/features/trash/trash"
 import { authMiddleware } from "@/middleware/auth"
 import { listsChangedMiddleware } from "@/middleware/lists-changed"
 import { insertFolder } from "./create"
 import { listFolders } from "./list"
 import { assertFolderTarget } from "./ownership"
-import { collectFolderSubtreeIds } from "./subtree"
 import { lockFolderTree } from "./tree-lock"
 
 export const getFolders = createServerFn({ method: "GET" })
@@ -84,60 +84,18 @@ export const updateFolder = createServerFn({ method: "POST" })
     })
   })
 
-/**
- * Soft-deletes a folder and its whole subtree (descendant folders + their
- * drawings) as one trash unit: every swept row gets the same trashRootId so
- * the unit can be restored intact. Rows that were already trashed keep their
- * own unit and are left untouched — restoring this folder must not resurrect
- * things trashed separately before it.
- */
+/** Trashes a folder and its subtree as one unit; see trashFolderUnit. */
 export const trashFolder = createServerFn({ method: "POST" })
   .middleware([authMiddleware, listsChangedMiddleware])
   .validator(z.string())
   .handler(async ({ data: id, context }) => {
     const userId = context.session.user.id
-    const now = new Date()
-
-    const swept = await db.transaction(async (tx) => {
-      await lockFolderTree(tx, "change")
-      const liveFolders = await tx
-        .select({ id: folders.id, parentId: folders.parentId })
-        .from(folders)
-        .where(and(accessibleTo(folders, userId), isNull(folders.deletedAt)))
-      if (!liveFolders.some((folder) => folder.id === id))
-        throw new Error("Folder not found")
-
-      const subtreeIds = [...collectFolderSubtreeIds(liveFolders, id)]
-
-      await tx
-        .update(folders)
-        .set({ deletedAt: now, trashRootId: id, deletedBy: userId })
-        .where(
-          and(
-            inArray(folders.id, subtreeIds),
-            accessibleTo(folders, userId),
-            isNull(folders.deletedAt),
-          ),
-        )
-      // Leaves updatedAt alone (see trashDrawing) so restore is in place.
-      return tx
-        .update(drawings)
-        .set({ deletedAt: now, trashRootId: id, deletedBy: userId })
-        .where(
-          and(
-            inArray(drawings.folderId, subtreeIds),
-            accessibleTo(drawings, userId),
-            isNull(drawings.deletedAt),
-          ),
-        )
-        .returning({ id: drawings.id })
-    })
-
+    const swept = await trashFolderUnit(db, userId, id)
     // Swept drawings end their live rooms too, like a direct trash.
-    await endTrashedRooms(
-      swept.map((drawing) => drawing.id),
-      { userId, name: userDisplayName(context.session.user) },
-    )
+    await endTrashedRooms(swept, {
+      userId,
+      name: userDisplayName(context.session.user),
+    })
   })
 
 /** Restores a folder trash unit; see restoreFolderUnit for the landing rules. */

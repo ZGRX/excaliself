@@ -1,7 +1,9 @@
 // The MCP server one member's AI client talks to: find, read, and create
-// drawings, create folders, and move drawings between folders, under the same
-// Space rule as that member's browser. Editing a drawing's scene is left out:
-// shared and Team drawings are written only by their Room (ADR 0002).
+// drawings, create folders, move drawings between folders, and move drawings
+// and folders to the trash and back, under the same Space rule as that
+// member's browser. Editing a drawing's scene is left out: shared and Team
+// drawings are written only by their Room (ADR 0002). Delete forever is left
+// out too: only a member empties the trash.
 
 import { McpServer } from "@modelcontextprotocol/server"
 import { and, eq, isNull } from "drizzle-orm"
@@ -9,7 +11,7 @@ import { z } from "zod"
 import type { Db } from "@/db"
 import { drawings, type Space, spaces } from "@/db/schema"
 import { userDisplayName } from "@/features/account/display-name"
-import { rooms } from "@/features/collab/room-registry"
+import { endTrashedRooms, rooms } from "@/features/collab/room-registry"
 import { roomElements } from "@/features/collab/room-session"
 import { insertDrawing } from "@/features/drawings/create"
 import { listDrawings } from "@/features/drawings/list"
@@ -20,6 +22,9 @@ import { listFolders } from "@/features/folders/list"
 import { folderPaths } from "@/features/folders/subtree"
 import { listUpdates } from "@/features/list-updates/hub"
 import { accessibleTo } from "@/features/spaces/access"
+import { restoreDrawingUnit, restoreFolderUnit } from "@/features/trash/restore"
+import { purgeDeadline, TRASH_RETENTION_DAYS } from "@/features/trash/retention"
+import { trashDrawingUnit, trashFolderUnit } from "@/features/trash/trash"
 import packageJson from "../../../package.json"
 import { buildScene } from "./scene/build"
 import { parseMermaid } from "./scene/mermaid"
@@ -72,7 +77,7 @@ export function createMcpServer(db: Db, member: Member, origin: string) {
     {
       // Bounds the work one create_drawing call can ask for.
       maxToolInputElements: 20_000,
-      instructions: `Excaliself is a self-hosted Excalidraw. You act as ${userDisplayName(member)}. Every drawing and folder lives in a Space: "private" (only this member sees it) or "team" (every member sees it). You can find, read, and create drawings, create folders, and move drawings between folders of one Space. You can't change what is in a drawing, and you can't delete anything.`,
+      instructions: `Excaliself is a self-hosted Excalidraw. You act as ${userDisplayName(member)}. Every drawing and folder lives in a Space: "private" (only this member sees it) or "team" (every member sees it). You can find, read, and create drawings, create folders, move drawings between folders of one Space, and move drawings and folders to the trash or back. Members can restore trashed items from Trash for ${TRASH_RETENTION_DAYS} days. You can't change what is in a drawing, and you can't delete anything for good.`,
     },
   )
   const drawingUrl = (id: string) => `${origin}/draw/${id}`
@@ -409,6 +414,102 @@ Colors: Excalidraw's palette reads best, e.g. backgrounds "#a5d8ff" (blue), "#b2
         ? folderPaths(await listFolders(db, member.id)).get(folderId)
         : undefined
       return json({ id, folder: folder ?? null, url: drawingUrl(id) })
+    },
+  )
+
+  const trasher = { userId: member.id, name: userDisplayName(member) }
+  const trashed = (id: string) => ({
+    id,
+    restorableUntil: purgeDeadline(new Date()).toISOString(),
+  })
+
+  server.registerTool(
+    "trash_drawing",
+    {
+      title: "Move drawing to trash",
+      description: `Moves one drawing to the trash. Members can restore it from Trash for ${TRASH_RETENTION_DAYS} days; after that it is deleted for good. In Team, every member loses it.`,
+      inputSchema: z.object({
+        id: z
+          .string()
+          .describe("A drawing id from list_drawings or search_drawings."),
+      }),
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: true,
+      },
+    },
+    async ({ id }) => {
+      await trashDrawingUnit(db, member.id, id)
+      await endTrashedRooms([id], trasher)
+      listUpdates.notify()
+      return json(trashed(id))
+    },
+  )
+
+  server.registerTool(
+    "trash_folder",
+    {
+      title: "Move folder to trash",
+      description: `Moves one folder to the trash, with its subfolders and every drawing in them. Members can restore it from Trash for ${TRASH_RETENTION_DAYS} days, as one unit; after that it is deleted for good. In Team, every member loses it.`,
+      inputSchema: z.object({
+        id: z.string().describe("A folder id from list_folders."),
+      }),
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: true,
+      },
+    },
+    async ({ id }) => {
+      const swept = await trashFolderUnit(db, member.id, id)
+      await endTrashedRooms(swept, trasher)
+      listUpdates.notify()
+      return json({ ...trashed(id), drawings: swept.length })
+    },
+  )
+
+  server.registerTool(
+    "restore_drawing",
+    {
+      title: "Restore drawing",
+      description:
+        "Takes a drawing out of the trash, back to its folder. If that folder is gone, it lands in the nearest folder above it, or at the top level.",
+      inputSchema: z.object({
+        id: z.string().describe("The id of a trashed drawing."),
+      }),
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+      },
+    },
+    async ({ id }) => {
+      const { originalFolderGone } = await restoreDrawingUnit(db, member.id, id)
+      listUpdates.notify()
+      return json({ id, originalFolderGone, url: drawingUrl(id) })
+    },
+  )
+
+  server.registerTool(
+    "restore_folder",
+    {
+      title: "Restore folder",
+      description:
+        "Takes a folder out of the trash, with everything that was trashed with it. If its parent folder is gone, it lands in the nearest folder above it, or at the top level.",
+      inputSchema: z.object({
+        id: z.string().describe("The id of a trashed folder."),
+      }),
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+      },
+    },
+    async ({ id }) => {
+      const { originalParentGone } = await restoreFolderUnit(db, member.id, id)
+      listUpdates.notify()
+      return json({ id, originalParentGone })
     },
   )
 

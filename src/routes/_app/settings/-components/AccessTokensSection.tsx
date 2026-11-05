@@ -37,7 +37,7 @@ export function AccessTokensSection() {
           <h2 className="text-sm font-medium text-foreground">Access tokens</h2>
           <p className="text-xs text-muted-foreground">
             Connect an AI client such as Claude Code over MCP. A token sees what
-            you see and can create drawings as you.
+            you see and can create and trash drawings as you.
           </p>
         </div>
         <Button

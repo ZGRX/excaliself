@@ -9,6 +9,7 @@ import { userDisplayName } from "@/features/account/display-name"
 import { endTrashedRooms } from "@/features/collab/room-registry"
 import { accessibleTo } from "@/features/spaces/access"
 import { restoreDrawingUnit } from "@/features/trash/restore"
+import { trashDrawingUnit } from "@/features/trash/trash"
 import { authMiddleware } from "@/middleware/auth"
 import { listsChangedMiddleware } from "@/middleware/lists-changed"
 import { insertDrawing } from "./create"
@@ -183,22 +184,7 @@ export const trashDrawing = createServerFn({ method: "POST" })
   .validator(z.string())
   .handler(async ({ data: id, context }) => {
     const userId = context.session.user.id
-    // Soft delete: the row keeps its folderId so undo restores it in place.
-    // Deliberately leaves updatedAt alone — trashing is not an edit and must
-    // not reshuffle recency-ordered lists once the drawing is restored.
-    const trashed = await db
-      .update(drawings)
-      .set({ deletedAt: new Date(), trashRootId: id, deletedBy: userId })
-      .where(
-        and(
-          eq(drawings.id, id),
-          accessibleTo(drawings, userId),
-          isNull(drawings.deletedAt),
-        ),
-      )
-      .returning({ id: drawings.id })
-    if (trashed.length === 0) throw new Error("Drawing not found")
-
+    await trashDrawingUnit(db, userId, id)
     // Flush and close the live room. The share row survives, so restore
     // revives the link.
     await endTrashedRooms([id], {

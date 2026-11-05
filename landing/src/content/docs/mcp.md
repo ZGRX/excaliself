@@ -1,6 +1,6 @@
 ---
 title: Connect an AI client
-description: Let Claude.ai, Claude Code, Claude Desktop, and other MCP clients find, read, and create drawings.
+description: Let Claude.ai, Claude Code, Claude Desktop, and other MCP clients find, read, create, and trash drawings.
 ---
 
 Excaliself has an [MCP](https://modelcontextprotocol.io) server at `/api/mcp`.
@@ -84,11 +84,16 @@ dynamic client registration signs in by itself. Otherwise, send the header
   inside another folder.
 - `move_drawing` moves a drawing into a folder, or to the top of its space. A
   drawing cannot move between your private space and Team.
+- `trash_drawing` and `trash_folder` move a drawing, or a folder with
+  everything in it, to the trash. `restore_drawing` and `restore_folder` take
+  them out again.
 
 ## Access
 
-A token or a connected app acts as you: it sees what you see. It can create
-drawings and folders, and move drawings between folders. It cannot change what
-is in a drawing, and it cannot delete anything. Under
-**Settings**, then **MCP**, revoke a token or disconnect an app at any time.
+A token or a connected app acts as you: it sees what you see, and it can
+trash what you can trash. It can create drawings and folders, and move
+drawings between folders. It cannot change what is in a drawing, and it
+cannot delete anything for good: trashed items stay in **Trash** for 30 days,
+where any member who can see them can restore them. Under **Settings**, then
+**MCP**, revoke a token or disconnect an app at any time.
 When an admin deletes a member, that member's tokens and apps stop working.
