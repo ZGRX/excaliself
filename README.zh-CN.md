@@ -15,7 +15,7 @@
   <a href="https://github.com/maciekzygmunt/excaliself/blob/main/README.md"><b>English README</b></a>
 </p>
 
-> **中文译文。** 本文件可能未及时跟进英文版本的更新。配置、部署和功能细节请以[英文 README](https://github.com/maciekzygmunt/excaliself/blob/main/README.md)及[英文文档](https://excaliself.com/docs/)为准。
+> **本文由社区翻译和维护**，可能未及时跟进英文版本的更新。配置、部署和功能细节请以[英文 README](https://github.com/maciekzygmunt/excaliself/blob/main/README.md)及[英文文档](https://excaliself.com/docs/)为准。
 
 <p align="center">
   <img src="docs/images/home-light.png" width="49%" alt="浅色主题下的 Excaliself 首页：侧边栏显示收藏的绘图和文件夹，右侧是绘图预览网格">
@@ -43,14 +43,14 @@ docker run --rm -p 127.0.0.1:3000:3000 -e PREVIEW_MODE=true ghcr.io/maciekzygmun
 - **团队空间**：每位成员都有自己的私人空间，也可以在所有成员均可查看和编辑的团队空间中协作。团队空间中的绘图始终开启实时协作。
 - **团队素材库**：全体成员共用一个素材库面板，其中的图形和图标保存在服务器上，并实时同步更新。也可以从 [libraries.excalidraw.com](https://libraries.excalidraw.com) 安装素材库。
 - **文件夹、收藏与最近使用**：支持在侧边栏中创建多级文件夹，通过拖放在文件夹之间移动绘图。
-- **搜索**：可在绘图列表或命令面板（<kbd>⌘K</kbd> / <kbd>Ctrl K</kbd>）中搜索绘图标题和画布内的文字。命令面板还支持快捷执行操作。
+- **搜索**：可在绘图列表或命令面板（<kbd>⌘K</kbd> / <kbd>Ctrl K</kbd>）中搜索绘图标题和画布内的文字。命令面板还可用于执行操作。
 - **从 Excalidraw+ 导入（测试版）**：使用 Excalidraw+ API 密钥导入绘图（场景）、集合和图片，入口为 Settings → Import（设置 → 导入）。
 - **拖放文件导入**：把电脑上的 `.excalidraw` 文件，或内嵌绘图数据的 `.png` / `.svg` 导出文件，拖到侧边栏中的文件夹上。
 - **回收站**：删除的内容可从回收站恢复，满 30 天后自动永久删除。
 - **邀请制账号**：第一位访问者创建管理员账号，其他人通过邀请链接加入。
 - **连接 AI 客户端**：Claude.ai、Claude Code、Claude Desktop 等 MCP 客户端可以查找、读取和创建绘图，也可以把绘图移入回收站。客户端通过 OAuth 授权或个人访问令牌接入，Excaliself 无需配置大语言模型（LLM）的 API 密钥。
 - **单点登录**：支持 Google Workspace、Microsoft Entra ID 和其他支持 OIDC 的身份服务（如 Okta、Authentik、Keycloak）。使用指定邮箱域名的用户可在首次登录时直接加入，无需邀请。
-- **管理员工具**：在“设置”中管理成员和角色、创建密码重置链接，并查看当前部署的统计信息。
+- **管理员工具**：在“设置”中管理成员和角色、创建密码重置链接，并查看实例统计信息。
 - **浅色与深色主题**：还可以为画布单独设置主题。
 
 ## 部署
@@ -77,7 +77,7 @@ docker compose up -d
 2. 选择 **Docker Compose** 构建方式，将 **Docker Compose Location** 设为 `/docker-compose.coolify.yaml`。
 3. 点击 **Deploy**（部署）。
 
-Coolify 会创建数据库、生成密钥并分配域名，因此不需要额外配置。如果服务器尚未未配置通配符域名，请先为 `excaliself` 服务配置域名，并在地址中注明容器端口，例如 `https://draw.example.com:3000`。访问该地址后即可创建管理员账号。若要使用指定版本而不是 `latest`，请在资源的环境变量中设置 `EXCALISELF_VERSION`（例如 `1.0.0`）。绘图保存在 `pgdata` 数据卷中，重新部署后仍会保留。
+Coolify 会创建数据库、生成密钥并分配域名，因此不需要额外配置。如果服务器尚未配置通配符域名，请先为 `excaliself` 服务配置域名，并在地址中注明容器端口，例如 `https://draw.example.com:3000`。访问该地址后即可创建管理员账号。若要使用指定版本而不是 `latest`，请在资源的环境变量中设置 `EXCALISELF_VERSION`（例如 `1.0.0`）。绘图保存在 `pgdata` 数据卷中，重新部署后仍会保留。
 
 ### 配置
 
@@ -103,12 +103,12 @@ Coolify 会创建数据库、生成密钥并分配域名，因此不需要额外
 
 Excaliself 在 `/api/mcp` 提供 [MCP（模型上下文协议）](https://modelcontextprotocol.io) 服务。模型调用由 AI 客户端负责，因此 Excaliself 无需配置大语言模型的 API 密钥。
 
-**Claude.ai**（网页版、桌面版和移动版）通过 OAuth 授权连接，无需手动配置访问令牌。在 Claude 中打开 **Settings → Connectors**（设置 → 连接器），点击 **Add custom connector**（添加自定义连接器），填入 `https://<你的实例地址>/api/mcp`，然后登录 Excaliself 并点击 **Allow**（允许）。你的 Excaliself 服务必须能通过公网 HTTPS 访问。
+**Claude.ai**（网页版、桌面版和移动版）通过 OAuth 授权连接，无需手动配置访问令牌。在 Claude 中打开 **Settings → Connectors**（设置 → 连接器），点击 **Add custom connector**（添加自定义连接器），填入 `https://<你的实例地址>/api/mcp`，然后登录 Excaliself 并点击 **Allow**（允许）。你的 Excaliself 实例必须能通过公网 HTTPS 访问。
 
 其他客户端可使用访问令牌：
 
 1. 在 Excaliself 中打开 **Settings → MCP**（设置 → MCP），点击 **New token**（新建令牌）。令牌只会显示一次，请及时复制并保存。
-2. 在 AI 客户端中添加 MCP 服务，填入你的 Excaliself 服务地址和令牌。
+2. 在 AI 客户端中添加 MCP 服务，填入你的 Excaliself 实例地址和令牌。
 
 **Claude Code**（令牌对话框会提供已填好地址和令牌的命令）：
 
@@ -148,7 +148,7 @@ claude mcp add --transport http excaliself https://draw.example.com/api/mcp \
 - `move_drawing`：把绘图移入文件夹，或移到所属空间的根目录；不能在私人空间与团队空间之间移动绘图。
 - `trash_drawing` 和 `trash_folder`：把绘图或文件夹及其中全部内容移入回收站；`restore_drawing` 和 `restore_folder` 可将其恢复。
 
-通过令牌或已授权应用发起的操作，使用的都是你的账号权限：可以查看你有权查看的内容，将你有权删除的内容移入回收站，创建绘图和文件夹，以及在文件夹之间移动绘图。这些客户端不能修改已有绘图的内容，也不能永久删除内容；移入回收站的内容会保留 30 天。你可以随时在“设置”中撤销令牌或断开应用连接。管理员删除成员时，该成员的令牌和应用连接也会失效。
+通过令牌或已授权应用发起的操作，使用的都是你的账号权限：可以查看你有权查看的内容，将你有权移入回收站的内容移入回收站，创建绘图和文件夹，以及在文件夹之间移动绘图。这些客户端不能修改已有绘图的内容，也不能永久删除内容；移入回收站的内容会保留 30 天。你可以随时在“设置”中撤销令牌或断开应用连接。管理员删除成员时，该成员的令牌和应用连接也会失效。
 
 ## 技术栈
 

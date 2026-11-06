@@ -12,7 +12,8 @@
 
 <p align="center">
   <a href="https://excaliself.com"><b>Website</b></a> ·
-  <a href="https://excaliself.com/docs/"><b>Docs</b></a>
+  <a href="https://excaliself.com/docs/"><b>Docs</b></a> ·
+  <a href="README.zh-CN.md"><b>简体中文</b></a>
 </p>
 
 <p align="center">
