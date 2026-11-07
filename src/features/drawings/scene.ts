@@ -192,7 +192,17 @@ export function buildInitialSceneData(
       fitToViewport: false,
       viewportZoomFactor: 0.9,
     }).appState
-    restored.appState = { ...restored.appState, scrollX, scrollY, zoom }
+    // Snap to whole screen pixels: centering in an odd-sized canvas lands on
+    // a half pixel, where Excalidraw's unsmoothed element bitmaps render
+    // ragged on 1x screens until the next pan or zoom.
+    const snap = (scroll: number) =>
+      Math.round(scroll * zoom.value) / zoom.value
+    restored.appState = {
+      ...restored.appState,
+      scrollX: snap(scrollX),
+      scrollY: snap(scrollY),
+      zoom,
+    }
   }
   return { initialData: { ...restored, files }, isDataCorrupt: isCorrupt }
 }
