@@ -12,7 +12,7 @@ services:
     image: ghcr.io/maciekzygmunt/excaliself:${EXCALISELF_VERSION:-latest}
     environment:
       - SERVICE_URL_EXCALISELF_3000
-      - BASE_URL=${SERVICE_URL_EXCALISELF_3000}
+      - BASE_URL=${SERVICE_URL_EXCALISELF}
       - BETTER_AUTH_SECRET=${SERVICE_PASSWORD_64_AUTH}
       - DATABASE_URL=postgresql://excaliself:${SERVICE_PASSWORD_POSTGRES}@db:5432/excaliself
       # Optional single sign-on, see https://excaliself.com/docs/single-sign-on/
