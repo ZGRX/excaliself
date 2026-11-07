@@ -12,7 +12,8 @@
 <p align="center">
   <a href="https://excaliself.com"><b>网站</b></a> ·
   <a href="https://excaliself.com/docs/"><b>英文文档</b></a> ·
-  <a href="https://github.com/maciekzygmunt/excaliself/blob/main/README.md"><b>English README</b></a>
+  <a href="https://github.com/maciekzygmunt/excaliself/blob/main/README.md"><b>English README</b></a> ·
+  <a href="https://x.com/0xzygmunt"><b>X</b></a>
 </p>
 
 > **本文由社区翻译和维护**，可能未及时跟进英文版本的更新。配置、部署和功能细节请以[英文 README](https://github.com/maciekzygmunt/excaliself/blob/main/README.md)及[英文文档](https://excaliself.com/docs/)为准。
