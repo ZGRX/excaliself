@@ -298,6 +298,12 @@ code {
   display: none;
 }
 
+/* The enlarged preview of a proposed edit is for looking only, so its menu
+   (export, help, socials) has nothing to offer. Unlayered, as above. */
+.drawing-edit-preview .excalidraw button.main-menu-trigger {
+  display: none;
+}
+
 /* Excalidraw's top row is a grid that overflows to the right once its items
    outgrow the canvas, pushing the Library button off screen. On narrow
    canvases (sidebar open, or a small window) the Library button goes

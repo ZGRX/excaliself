@@ -104,12 +104,16 @@ function Consent({
           <ul className="space-y-2 text-sm text-foreground">
             <Permission>See the drawings and folders you see</Permission>
             <Permission>Create new drawings and folders</Permission>
+            <Permission>
+              Propose changes to drawings, which you apply or discard
+            </Permission>
             <Permission>Move drawings between folders</Permission>
             <Permission>Move drawings and folders to the trash</Permission>
           </ul>
           <p className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
             <X aria-hidden className="h-4 w-4 shrink-0" />
-            It can't edit drawings or delete anything for good
+            It can't change a drawing without your Apply, or delete anything for
+            good
           </p>
         </div>
 

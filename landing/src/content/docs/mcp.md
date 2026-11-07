@@ -1,6 +1,6 @@
 ---
 title: Connect an AI client
-description: Let Claude.ai, Claude Code, Claude Desktop, and other MCP clients find, read, create, and trash drawings.
+description: Let Claude.ai, Claude Code, Claude Desktop, and other MCP clients find, read, create, change, and trash drawings, with every change applied only by you.
 ---
 
 Excaliself has an [MCP](https://modelcontextprotocol.io) server at `/api/mcp`.
@@ -127,6 +127,10 @@ client still works, but you can't open the app.
 - `create_drawing` makes a new drawing in your private space or in Team,
   optionally in a folder, from simple shapes and arrows or a Mermaid flowchart.
   Mermaid `style` lines color the nodes (`fill` and `stroke`, as hex or named colors).
+- `edit_drawing` proposes a change to an existing drawing: shapes, text, and
+  arrows to add, change, or remove. Nothing changes until you click **Apply**.
+  See [Change a drawing](#change-a-drawing). `get_drawing_edit` tells the
+  client whether you applied it.
 - `create_folder` makes a folder in your private space or in Team, optionally
   inside another folder.
 - `move_drawing` moves a drawing into a folder, or to the top of its space. A
@@ -135,12 +139,39 @@ client still works, but you can't open the app.
   everything in it, to the trash. `restore_drawing` and `restore_folder` take
   them out again.
 
+## Change a drawing
+
+Ask your AI client for a change, for example "Add a CDN in front of the API".
+The client reads the drawing and proposes the change. The drawing does not
+change yet.
+
+1. Open the drawing in Excaliself. The client gives you its link. If the
+   drawing is open already, the proposal shows at once.
+2. A card shows a preview of the drawing after the change: new elements in
+   green, changed ones in blue, and removed ones in red. Click the preview to
+   open it larger, on a canvas you can zoom and pan but not edit.
+3. Click **Apply** or **Discard**.
+
+On **Apply**, your browser makes the change on your canvas, as if you drew
+it. Everyone with the drawing open sees it live, and you can undo it with
+<kbd>⌘Z</kbd> or <kbd>Ctrl Z</kbd>. The client learns whether you applied or
+discarded it.
+
+- Only you see the card, in each of your tabs on that drawing. Other members
+  and guests see the change only after you apply it.
+- If someone changes the same shapes before you click **Apply**, nothing is
+  applied. The client reads the drawing again and proposes the change again.
+- A proposal expires after 30 minutes. A new proposal for the same drawing
+  replaces the old one. Proposals are kept in memory, so a restart of the
+  instance drops them, and nothing changes.
+
 ## Access
 
 A token or a connected app acts as you: it sees what you see, and it can
 trash what you can trash. It can create drawings and folders, and move
-drawings between folders. It cannot change what is in a drawing, and it
-cannot delete anything for good: trashed items stay in **Trash** for 30 days,
+drawings between folders. It cannot change what is in a drawing until you
+click **Apply**, and it cannot delete anything for good: trashed items stay
+in **Trash** for 30 days,
 where any member who can see them can restore them. Under **Settings**, then
 **MCP**, revoke a token or disconnect an app at any time.
 When an admin deletes a member, that member's tokens and apps stop working.

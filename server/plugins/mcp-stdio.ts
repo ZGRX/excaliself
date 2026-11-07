@@ -31,10 +31,18 @@ async function serve(out: Writable) {
     ],
   )
   const origin = `http://localhost:${process.env.PORT || 3000}`
-  stdio.serveStdio(() => createMcpServer(db, demoAdmin, origin), {
-    transport: new stdio.StdioServerTransport(process.stdin, out),
-    onerror: (error) => console.error("[mcp-stdio]", error),
-  })
+  stdio.serveStdio(
+    () =>
+      createMcpServer(
+        db,
+        { ...demoAdmin, client: "A local AI client" },
+        origin,
+      ),
+    {
+      transport: new stdio.StdioServerTransport(process.stdin, out),
+      onerror: (error) => console.error("[mcp-stdio]", error),
+    },
+  )
   // The client closed its end: shut down like a deploy does (Rooms flush,
   // sockets close), so `docker run -i --rm` ends too.
   process.stdin.once("end", () => process.kill(process.pid, "SIGTERM"))

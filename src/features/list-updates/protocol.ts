@@ -3,7 +3,12 @@
 
 export const LISTS_CHANGED = "changed"
 export const LIBRARY_CHANGED = "library"
-export type ListUpdate = typeof LISTS_CHANGED | typeof LIBRARY_CHANGED
+/** A member's proposed drawing edits changed. */
+export const EDITS_CHANGED = "edits"
+export type ListUpdate =
+  | typeof LISTS_CHANGED
+  | typeof LIBRARY_CHANGED
+  | typeof EDITS_CHANGED
 export const PING = "ping"
 export const PONG = "pong"
 

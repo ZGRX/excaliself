@@ -1,6 +1,7 @@
 // read_drawing's view of a scene: what an LLM needs to understand a drawing
 // (shapes and their labels, text, what connects to what, what sits inside
-// what) in a few lines, instead of the raw element JSON.
+// what) in a few lines, instead of the raw element JSON. Each line carries
+// its element's id, which edit_drawing takes.
 
 type Box = { x: number; y: number; width: number; height: number }
 type Point = { x: number; y: number }
@@ -91,6 +92,8 @@ const quote = (text: string) => {
 const at = ({ x, y }: { x: number; y: number }) =>
   `(${Math.round(x)}, ${Math.round(y)})`
 
+const idOf = ({ id }: Item) => `[id ${id}]`
+
 function capped(lines: string[]): string[] {
   return lines.length > MAX_ITEMS
     ? [...lines.slice(0, MAX_ITEMS), `… and ${lines.length - MAX_ITEMS} more`]
@@ -158,7 +161,7 @@ export function summarizeScene(
   const shapeLines = shapes.map((shape) => {
     const { x, y, width, height } = shape.box
     const details = [
-      `${name(shape)}: ${shape.type} at ${at({ x, y })}, ${Math.round(width)}×${Math.round(height)}`,
+      `${name(shape)} ${idOf(shape)}: ${shape.type} at ${at({ x, y })}, ${Math.round(width)}×${Math.round(height)}`,
     ]
     if (shape.fill && shape.fill !== "transparent")
       details.push(`, fill ${shape.fill}`)
@@ -200,16 +203,19 @@ export function summarizeScene(
       connector.strokeStyle && connector.strokeStyle !== "solid"
         ? `, ${connector.strokeStyle}`
         : ""
-    return `${line}${label ? `, labeled ${quote(label)}` : ""}${style}`
+    return `${line} ${idOf(connector)}${label ? `, labeled ${quote(label)}` : ""}${style}`
   })
 
   const textLines = freeTexts
     .sort(readingOrder)
-    .map((text) => `${quote(text.text)} at ${at(text.box)}${placement(text)}`)
+    .map(
+      (text) =>
+        `${quote(text.text)} ${idOf(text)} at ${at(text.box)}${placement(text)}`,
+    )
 
   const freedraws = live.filter((item) => item.type === "freedraw").length
   const sections = [
-    `${live.length} elements. Positions are canvas pixels (x right, y down); S1, S2, … name shapes in reading order.`,
+    `${live.length} elements. Positions are canvas pixels (x right, y down); S1, S2, … name shapes in reading order; [id …] is the element's id.`,
   ]
   const section = (title: string, lines: string[]) => {
     if (lines.length > 0)

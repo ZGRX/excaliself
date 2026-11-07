@@ -104,22 +104,22 @@ test("names shapes, follows connections, and places text", () => {
   ])
 
   expect(summary).toBe(
-    `14 elements. Positions are canvas pixels (x right, y down); S1, S2, … name shapes in reading order.
+    `14 elements. Positions are canvas pixels (x right, y down); S1, S2, … name shapes in reading order; [id …] is the element's id.
 
 Shapes:
-S1 "Backend": rectangle at (0, 0), 600×300, dashed
-S2 "API server": rectangle at (40, 60), 160×80, fill #a5d8ff, inside S1
-S3 "Postgres": ellipse at (380, 60), 160×80, inside S1
+S1 "Backend" [id zone]: rectangle at (0, 0), 600×300, dashed
+S2 "API server" [id api]: rectangle at (40, 60), 160×80, fill #a5d8ff, inside S1
+S3 "Postgres" [id db]: ellipse at (380, 60), 160×80, inside S1
 
 Connections:
-S2 "API server" → S3 "Postgres", labeled "SQL"
-(100, 400) → S2 "API server" (not attached), dotted
-text "Read path" → S2 "API server"
-(0, 500) — (600, 500) (line, no arrowheads)
+S2 "API server" → S3 "Postgres" [id query], labeled "SQL"
+(100, 400) → S2 "API server" (not attached) [id sketched], dotted
+text "Read path" → S2 "API server" [id from-title]
+(0, 500) — (600, 500) (line, no arrowheads) [id rule]
 
 Text:
-"Read path" at (0, -60)
-"Reads only" at (60, 200), inside S1
+"Read path" [id title] at (0, -60)
+"Reads only" [id note] at (60, 200), inside S1
 
 Also 1 freehand stroke.`,
   )

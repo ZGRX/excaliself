@@ -263,7 +263,7 @@ export async function refreshTokens(
   return null
 }
 
-/** The member an OAuth access token acts as, or null. */
+/** The member an OAuth access token acts as, `client` being the app's name, or null. */
 export async function memberForOAuthToken(db: Db, token: string) {
   if (!token.startsWith(ACCESS_PREFIX)) return null
   const now = new Date()
@@ -271,10 +271,16 @@ export async function memberForOAuthToken(db: Db, token: string) {
     .select({
       grantId: oauthGrants.id,
       lastUsedAt: oauthGrants.lastUsedAt,
-      member: { id: users.id, name: users.name, email: users.email },
+      member: {
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        client: oauthClients.name,
+      },
     })
     .from(oauthGrants)
     .innerJoin(users, eq(users.id, oauthGrants.userId))
+    .innerJoin(oauthClients, eq(oauthClients.id, oauthGrants.clientId))
     .where(
       and(
         eq(oauthGrants.accessTokenHash, hashToken(token)),

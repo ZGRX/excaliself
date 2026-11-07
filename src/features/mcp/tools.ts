@@ -1,9 +1,9 @@
 // The MCP server one member's AI client talks to: find, read, and create
-// drawings, create folders, move drawings between folders, and move drawings
-// and folders to the trash and back, under the same Space rule as that
-// member's browser. Editing a drawing's scene is left out: shared and Team
-// drawings are written only by their Room (ADR 0002). Delete forever is left
-// out too: only a member empties the trash.
+// drawings, propose changes to them, create folders, move drawings between
+// folders, and move drawings and folders to the trash and back, under the
+// same Space rule as that member's browser. A proposed change waits for the
+// member's Apply in their own tab, which writes it like any edit (ADR 0003).
+// Delete forever is left out: only a member empties the trash.
 
 import { McpServer } from "@modelcontextprotocol/server"
 import { and, eq, isNull } from "drizzle-orm"
@@ -13,6 +13,8 @@ import { drawings, type Space, spaces } from "@/db/schema"
 import { userDisplayName } from "@/features/account/display-name"
 import { endTrashedRooms, rooms } from "@/features/collab/room-registry"
 import { roomElements } from "@/features/collab/room-session"
+import { parseStoredScene } from "@/features/collab/scene-store"
+import { type DrawingEdit, drawingEdits } from "@/features/drawing-edits/store"
 import { insertDrawing } from "@/features/drawings/create"
 import { listDrawings } from "@/features/drawings/list"
 import { matchDrawing, parseSceneElements } from "@/features/drawings/search"
@@ -21,12 +23,14 @@ import { insertFolder } from "@/features/folders/create"
 import { listFolders } from "@/features/folders/list"
 import { folderPaths } from "@/features/folders/subtree"
 import { listUpdates } from "@/features/list-updates/hub"
+import { EDITS_CHANGED } from "@/features/list-updates/protocol"
 import { accessibleTo } from "@/features/spaces/access"
 import { restoreDrawingUnit, restoreFolderUnit } from "@/features/trash/restore"
 import { purgeDeadline, TRASH_RETENTION_DAYS } from "@/features/trash/retention"
 import { trashDrawingUnit, trashFolderUnit } from "@/features/trash/trash"
 import packageJson from "../../../package.json"
 import { buildScene } from "./scene/build"
+import { elementChange, planEdit } from "./scene/edit"
 import { parseMermaid } from "./scene/mermaid"
 import {
   directions,
@@ -36,7 +40,16 @@ import {
 } from "./scene/skeleton"
 import { summarizeScene } from "./summary"
 
-export type Member = { id: string; name: string; email: string }
+export type Member = {
+  id: string
+  name: string
+  email: string
+  /** The connected app's or access token's name, shown on proposed edits. */
+  client: string
+}
+
+/** How long edit_drawing and get_drawing_edit wait for the member to decide. */
+export const EDIT_WAIT_MS = 25_000
 
 const space = z
   .enum(spaces)
@@ -77,7 +90,9 @@ export function createMcpServer(db: Db, member: Member, origin: string) {
     {
       // Bounds the work one create_drawing call can ask for.
       maxToolInputElements: 20_000,
-      instructions: `Excaliself is a self-hosted Excalidraw. You act as ${userDisplayName(member)}. Every drawing and folder lives in a Space: "private" (only this member sees it) or "team" (every member sees it). You can find, read, and create drawings, create folders, move drawings between folders of one Space, and move drawings and folders to the trash or back. Members can restore trashed items from Trash for ${TRASH_RETENTION_DAYS} days. You can't change what is in a drawing, and you can't delete anything for good.`,
+      instructions: `Excaliself is a self-hosted Excalidraw. You act as ${userDisplayName(member)}. Every drawing and folder lives in a Space: "private" (only this member sees it) or "team" (every member sees it). You can find, read, and create drawings, create folders, move drawings between folders of one Space, and move drawings and folders to the trash or back. Members can restore trashed items from Trash for ${TRASH_RETENTION_DAYS} days. You can't delete anything for good.
+
+To change what is in an existing drawing, read it with read_drawing, then propose the change with edit_drawing. Nothing changes until the member clicks Apply on the drawing in Excaliself. Give them the drawing's link, and never say a change is done until a tool reports "applied".`,
     },
   )
   const drawingUrl = (id: string) => `${origin}/draw/${id}`
@@ -99,6 +114,33 @@ export function createMcpServer(db: Db, member: Member, origin: string) {
         (drawing) => !filter.folderId || drawing.folderId === filter.folderId,
       )
     return { list, paths: folderPaths(folders) }
+  }
+
+  /** A drawing the member can see and that is not trashed. */
+  const findDrawing = async (id: string) => {
+    const [drawing] = await db
+      .select({
+        name: drawings.name,
+        data: drawings.data,
+        space: drawings.space,
+        folderId: drawings.folderId,
+        updatedAt: drawings.updatedAt,
+      })
+      .from(drawings)
+      .where(
+        and(
+          eq(drawings.id, id),
+          accessibleTo(drawings, member.id),
+          isNull(drawings.deletedAt),
+        ),
+      )
+    // Same answer for a missing drawing and one the member can't see.
+    if (!drawing) {
+      throw new Error(
+        "No drawing has that id. Find one with list_drawings or search_drawings.",
+      )
+    }
+    return drawing
   }
 
   const toRow = (drawing: ListedDrawing, paths: Map<string, string>) => ({
@@ -205,7 +247,7 @@ export function createMcpServer(db: Db, member: Member, origin: string) {
     {
       title: "Read drawing",
       description:
-        "Describes a drawing: its shapes and their labels, text, which shapes arrows connect, and what sits inside what, with positions. Not the raw Excalidraw JSON.",
+        "Describes a drawing: its shapes and their labels, text, which shapes arrows connect, and what sits inside what, with positions and element ids (for edit_drawing). Not the raw Excalidraw JSON.",
       inputSchema: z.object({
         id: z
           .string()
@@ -214,28 +256,7 @@ export function createMcpServer(db: Db, member: Member, origin: string) {
       annotations: { readOnlyHint: true },
     },
     async ({ id }) => {
-      const [drawing] = await db
-        .select({
-          name: drawings.name,
-          data: drawings.data,
-          space: drawings.space,
-          folderId: drawings.folderId,
-          updatedAt: drawings.updatedAt,
-        })
-        .from(drawings)
-        .where(
-          and(
-            eq(drawings.id, id),
-            accessibleTo(drawings, member.id),
-            isNull(drawings.deletedAt),
-          ),
-        )
-      // Same answer for a missing drawing and one the member can't see.
-      if (!drawing) {
-        throw new Error(
-          "No drawing has that id. Find one with list_drawings or search_drawings.",
-        )
-      }
+      const drawing = await findDrawing(id)
       // A live Room holds newer edits than the stored scene.
       const elements =
         (await roomElements(rooms, id)) ?? parseSceneElements(drawing.data)
@@ -262,7 +283,7 @@ export function createMcpServer(db: Db, member: Member, origin: string) {
     "create_drawing",
     {
       title: "Create drawing",
-      description: `Creates a NEW drawing from simple elements and/or a Mermaid flowchart, and returns its link. What is in an existing drawing can't be changed.
+      description: `Creates a NEW drawing from simple elements and/or a Mermaid flowchart, and returns its link. To change an existing drawing, use edit_drawing.
 
 Elements: shapes ("rectangle", "ellipse", "diamond") with an optional label; "text"; and "arrow" or "line" connectors that join shapes by id ("from", "to") or run between points ("start", "end"). Shapes and text without x/y are laid out automatically, in "direction", with arrows routed between them; labels wrap and shapes grow to fit. Auto-layout gives the cleanest diagrams: give x/y (top-left, pixels, y grows down) only for layouts a graph can't express, such as grids or timelines. Keep arrow labels to a few words; put detail in shape labels or a text note.
 
@@ -326,6 +347,111 @@ Colors: Excalidraw's palette reads best, e.g. backgrounds "#a5d8ff" (blue), "#b2
         elements: elements.length,
         url: drawingUrl(created.id),
       })
+    },
+  )
+
+  const editMessages: Record<DrawingEdit["status"], string> = {
+    pending: `Nothing has changed yet. ${userDisplayName(member)} must click Apply on the drawing in Excaliself. Give them the link, then call get_drawing_edit for the result.`,
+    applying:
+      "The member clicked Apply and it is being applied. Call get_drawing_edit for the result.",
+    applied:
+      "Applied. Everyone with the drawing open sees the change, and the member can undo it.",
+    discarded: "The member discarded it. Nothing changed.",
+    stale:
+      "Not applied: the drawing changed before the member clicked Apply. Read it again, and propose the change again if it is still wanted.",
+    replaced:
+      "A newer proposal for this drawing took its place. Nothing changed from this one.",
+    expired: "It expired before the member decided. Nothing changed.",
+    unconfirmed:
+      "The member clicked Apply, but their tab never confirmed the outcome. Read the drawing to see whether the change is there before proposing it again.",
+  }
+  const editResult = (edit: DrawingEdit) =>
+    json({
+      editId: edit.id,
+      status: edit.status,
+      message: editMessages[edit.status],
+      changes: edit.changes,
+      url: drawingUrl(edit.drawingId),
+    })
+
+  server.registerTool(
+    "edit_drawing",
+    {
+      title: "Propose a drawing edit",
+      description: `Proposes a change to an existing drawing. Nothing changes until the member clicks Apply on the drawing in Excaliself, where they see a preview; this tool then reports "applied", "discarded", or "stale". It waits up to ${EDIT_WAIT_MS / 1000} seconds for that, then returns "pending": tell the member to open the link, and call get_drawing_edit later.
+
+Read the drawing with read_drawing first, and refer to its elements by the [id …] it shows.
+- add: new elements, in create_drawing's format. Arrows may join existing shapes by element id ("from", "to"). Give new shapes x/y next to the shapes they relate to (read_drawing gives positions); without x/y they are laid out beside the drawing.
+- change: by element id. Shapes take label, x/y (move), width/height, colors, and strokeStyle; text takes text, x/y, and strokeColor; arrows take label, strokeColor, and strokeStyle. Arrows bound to a moved shape follow it. To attach an arrow to other shapes, remove it and add a new one.
+- remove: element ids. A shape's label goes with it; arrows bound to it stay, unattached.`,
+      inputSchema: z.object({
+        id: z
+          .string()
+          .describe("A drawing id from list_drawings or search_drawings."),
+        summary: z
+          .string()
+          .trim()
+          .min(1)
+          .max(200)
+          .describe(
+            'One line the member reads before Apply, e.g. "Add a CDN in front of the API".',
+          ),
+        add: z.array(elementSkeleton).max(MAX_ELEMENTS).default([]),
+        change: z.array(elementChange).max(MAX_ELEMENTS).default([]),
+        remove: z
+          .array(z.string())
+          .max(MAX_ELEMENTS)
+          .default([])
+          .describe("Element ids from read_drawing."),
+      }),
+      annotations: {
+        readOnlyHint: false,
+        // It writes nothing: only the member's Apply in Excaliself does.
+        destructiveHint: false,
+        idempotentHint: false,
+      },
+    },
+    async ({ id, summary, add, change, remove }) => {
+      if (add.length + change.length + remove.length === 0)
+        throw new Error("Nothing to change: give add, change, or remove.")
+      const drawing = await findDrawing(id)
+      // A live Room holds newer edits than the stored scene.
+      const live = await roomElements(rooms, id)
+      const stored = live ? null : parseStoredScene(drawing.data)
+      if (stored && !stored.readable)
+        throw new Error("This drawing's data is damaged and can't be changed.")
+      const plan = planEdit(live ?? stored?.elements ?? [], {
+        add,
+        change,
+        remove,
+      })
+      const edit = drawingEdits.propose({
+        drawingId: id,
+        userId: member.id,
+        client: member.client,
+        summary,
+        ...plan,
+      })
+      listUpdates.notify(EDITS_CHANGED)
+      const decided = await drawingEdits.wait(edit.id, member.id, EDIT_WAIT_MS)
+      return editResult(decided ?? edit)
+    },
+  )
+
+  server.registerTool(
+    "get_drawing_edit",
+    {
+      title: "Check a drawing edit",
+      description: `Reports whether the member applied an edit from edit_drawing. While it is still pending, waits up to ${EDIT_WAIT_MS / 1000} seconds for their decision.`,
+      inputSchema: z.object({
+        editId: z.string().describe("The editId edit_drawing returned."),
+      }),
+      annotations: { readOnlyHint: true },
+    },
+    async ({ editId }) => {
+      const edit = await drawingEdits.wait(editId, member.id, EDIT_WAIT_MS)
+      if (!edit) throw new Error("No edit has that id.")
+      return editResult(edit)
     },
   )
 

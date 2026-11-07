@@ -1,6 +1,6 @@
 // Client half of the lists socket: refetches the drawing, folder, and trash
-// lists, or the team library, when the server says they changed. Reconnects
-// forever.
+// lists, the team library, or proposed drawing edits, when the server says
+// they changed. Reconnects forever.
 
 import { type QueryClient, useQueryClient } from "@tanstack/react-query"
 import { useEffect } from "react"
@@ -9,6 +9,7 @@ import { foldersQueryOptions } from "@/features/folders/queries"
 import { createReconnectBackoff } from "@/lib/socket/backoff"
 import { createHeartbeat } from "@/lib/socket/heartbeat"
 import {
+  EDITS_CHANGED,
   LIBRARY_CHANGED,
   LISTS_CHANGED,
   listUpdatesUrl,
@@ -26,6 +27,8 @@ const LIST_KEYS = [
 ]
 // Same: matches libraryQueryOptions().
 const LIBRARY_KEY = ["library"]
+// Same: matches drawingEditQueryOptions().
+const EDITS_KEY = ["drawing-edits"]
 
 function invalidateLists(queryClient: QueryClient) {
   for (const queryKey of LIST_KEYS)
@@ -58,6 +61,8 @@ export function useListUpdates() {
     // Library saves aren't mutations; the library sync guards its own.
     const refetchLibrary = () =>
       void queryClient.invalidateQueries({ queryKey: LIBRARY_KEY })
+    const refetchEdits = () =>
+      void queryClient.invalidateQueries({ queryKey: EDITS_KEY })
 
     const connect = () => {
       const current = new WebSocket(listUpdatesUrl(window.location))
@@ -74,12 +79,14 @@ export function useListUpdates() {
         // Changes before this open (after the loader's fetch, or in an outage) sent it nothing.
         refetchLists()
         refetchLibrary()
+        refetchEdits()
       })
 
       current.addEventListener("message", (event) => {
         if (event.data === PONG) beat.acknowledge()
         else if (event.data === LISTS_CHANGED) refetchLists()
         else if (event.data === LIBRARY_CHANGED) refetchLibrary()
+        else if (event.data === EDITS_CHANGED) refetchEdits()
       })
 
       current.addEventListener("close", (event) => {

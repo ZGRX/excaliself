@@ -53,14 +53,19 @@ export async function revokeAccessToken(db: Db, userId: string, id: string) {
   if (revoked.length === 0) throw new Error("Token not found")
 }
 
-/** The member a token acts as, or null when it is unknown or revoked. */
+/** The member a token acts as, `client` being the token's name. Null when unknown or revoked. */
 export async function memberForToken(db: Db, token: string) {
   if (!token.startsWith(PREFIX)) return null
   const [row] = await db
     .select({
       tokenId: accessTokens.id,
       lastUsedAt: accessTokens.lastUsedAt,
-      member: { id: users.id, name: users.name, email: users.email },
+      member: {
+        id: users.id,
+        name: users.name,
+        email: users.email,
+        client: accessTokens.name,
+      },
     })
     .from(accessTokens)
     .innerJoin(users, eq(users.id, accessTokens.userId))

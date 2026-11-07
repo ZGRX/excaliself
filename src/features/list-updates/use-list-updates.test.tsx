@@ -4,6 +4,7 @@ import type { ReactNode } from "react"
 import { afterEach, beforeEach, expect, test, vi } from "vitest"
 import { RECONNECT_MAX_DELAY_MS } from "@/lib/socket/backoff"
 import {
+  EDITS_CHANGED,
   LIBRARY_CHANGED,
   LISTS_CHANGED,
   SIGNED_OUT_CLOSE_CODE,
@@ -89,6 +90,15 @@ test("a library change refetches only the library", () => {
   expect(invalidatedKeys()).toEqual([["library"]])
 })
 
+test("an edits change refetches only the proposed edits", () => {
+  const { invalidate, invalidatedKeys } = renderListUpdates()
+  act(() => sockets[0].open())
+  invalidate.mockClear()
+
+  act(() => sockets[0].receive(EDITS_CHANGED))
+  expect(invalidatedKeys()).toEqual([["drawing-edits"]])
+})
+
 test("a change during this tab's own mutation waits for it to settle", async () => {
   // Query's notify batching runs on timers.
   vi.useRealTimers()
@@ -120,13 +130,13 @@ test("a change during this tab's own mutation waits for it to settle", async () 
 test("each open catches up on changes the tab missed", () => {
   const { invalidate } = renderListUpdates()
   act(() => sockets[0].open())
-  expect(invalidate).toHaveBeenCalledTimes(4)
+  expect(invalidate).toHaveBeenCalledTimes(5)
   act(() => sockets[0].close(1006))
 
   waitOutBackoff()
   expect(sockets).toHaveLength(2)
   act(() => sockets[1].open())
-  expect(invalidate).toHaveBeenCalledTimes(8)
+  expect(invalidate).toHaveBeenCalledTimes(10)
 })
 
 test("a signed-out close stops dialing", () => {

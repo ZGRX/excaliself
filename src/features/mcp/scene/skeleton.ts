@@ -4,12 +4,15 @@
 
 import { z } from "zod"
 
-const color = z.string().max(32).describe('A hex color such as "#a5d8ff".')
-const ref = z.string().min(1).max(100)
-const coordinate = z.number().min(-100_000).max(100_000)
-const size = z.number().min(1).max(10_000)
+export const color = z
+  .string()
+  .max(32)
+  .describe('A hex color such as "#a5d8ff".')
+export const ref = z.string().min(1).max(100)
+export const coordinate = z.number().min(-100_000).max(100_000)
+export const size = z.number().min(1).max(10_000)
 const fontSize = z.number().min(8).max(120).describe("Default 20.")
-const strokeStyle = z.enum(["solid", "dashed", "dotted"])
+export const strokeStyle = z.enum(["solid", "dashed", "dotted"])
 // Not z.tuple: its JSON Schema ("items": false) trips some MCP clients.
 const point = z.array(coordinate).length(2)
 const arrowhead = z

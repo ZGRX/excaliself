@@ -55,8 +55,19 @@ const BLOCK_GAP = 100
 
 export type { BuiltElement }
 
-/** Builds a scene's elements. Throws SceneInputError listing every problem in the input. */
-export function buildScene(graph: SceneGraph): BuiltElement[] {
+/** What a drawing already holds, for elements added to it. */
+export type Drawn = {
+  /** Shapes new arrows may join, by element id. */
+  targets: Map<string, Target>
+  /** Around the existing content; auto-layout goes beside it. */
+  bounds: Box | null
+}
+
+/**
+ * Builds a scene's elements, or the elements added to `drawn`. Throws
+ * SceneInputError listing every problem in the input.
+ */
+export function buildScene(graph: SceneGraph, drawn?: Drawn): BuiltElement[] {
   // Checked first: layout time grows fast with the number of edges.
   const count = graph.elements.length + graph.clusters.length
   if (count > MAX_ELEMENTS) {
@@ -75,6 +86,8 @@ export function buildScene(graph: SceneGraph): BuiltElement[] {
   const claim = (ref: string | undefined, where: string) => {
     if (ref === undefined) return
     if (refs.has(ref)) errors.push(`${where}: id "${ref}" is used twice.`)
+    else if (drawn?.targets.has(ref))
+      errors.push(`${where}: id "${ref}" is already an element's id.`)
     refs.add(ref)
   }
 
@@ -154,7 +167,8 @@ export function buildScene(graph: SceneGraph): BuiltElement[] {
     const { from, to, start, end } = connector.skeleton
     const resolve = (ref: string | undefined, field: string) => {
       if (ref === undefined) return null
-      const target = shapes.get(ref) ?? clusters.get(ref)
+      const target =
+        shapes.get(ref) ?? clusters.get(ref) ?? drawn?.targets.get(ref)
       if (!target) {
         errors.push(
           refs.has(ref)
@@ -174,7 +188,14 @@ export function buildScene(graph: SceneGraph): BuiltElement[] {
 
   if (errors.length > 0) throw new SceneInputError(errors.join("\n"))
 
-  autoLayout(graph.direction, clusters, shapes, connectors, texts)
+  autoLayout(
+    graph.direction,
+    clusters,
+    shapes,
+    connectors,
+    texts,
+    drawn?.bounds ?? null,
+  )
 
   const boundTo = (target: Target) =>
     connectors.flatMap(({ id, from, to }) =>
@@ -193,7 +214,7 @@ export function buildScene(graph: SceneGraph): BuiltElement[] {
   ])
 }
 
-function cleanText(text: string): string {
+export function cleanText(text: string): string {
   return text.replace(/\r\n?/g, "\n").replace(/\t/g, "    ").trim()
 }
 
@@ -205,7 +226,7 @@ function labelOf(text: string, fontSize: number): Label | null {
 
 // Excalidraw's computeContainerDimensionForBoundText: the container size
 // whose text box is `dimension`.
-function containerSize(type: ShapeType, dimension: number): number {
+export function containerSize(type: ShapeType, dimension: number): number {
   const size = Math.ceil(dimension)
   if (type === "ellipse")
     return Math.round(((size + PADDING * 2) / Math.SQRT2) * 2)
@@ -271,12 +292,14 @@ function autoLayout(
   shapesByRef: Map<string, Shape>,
   connectors: Connector[],
   texts: FreeText[],
+  drawnBounds: Box | null,
 ) {
   const clusters = [...clustersByRef.values()]
   const shapes = [...shapesByRef.values()]
   const placed = shapes.filter((shape) => shape.positioned)
   const floating = shapes.filter((shape) => !shape.positioned)
   const placedBounds = boundsOf([
+    ...(drawnBounds ? [drawnBounds] : []),
     ...placed.map((shape) => shape.box),
     ...connectors.flatMap(({ skeleton }) =>
       [skeleton.start, skeleton.end].flatMap((point) =>

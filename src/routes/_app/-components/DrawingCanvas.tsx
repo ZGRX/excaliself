@@ -49,6 +49,7 @@ import { drawingShareQueryOptions } from "@/features/shares/queries"
 import { useAutoSave } from "@/hooks/use-auto-save"
 import { usePreloadTextFont } from "@/hooks/use-preload-text-font"
 import { useCanvasTheme } from "@/hooks/use-theme"
+import { DrawingEditCard } from "./DrawingEditCard"
 import { useMoveToTeamDialog } from "./MoveToTeamDialog"
 import { SaveStatusPill } from "./SaveStatusPill"
 import { ShareDialog } from "./ShareDialog"
@@ -461,6 +462,13 @@ export function DrawingCanvas({
         </TopLeftPortal>
       </Excalidraw>
       <FollowModeOverlay room={room} />
+      {!readOnly && (
+        <DrawingEditCard
+          drawingId={drawingId}
+          excalidrawAPI={excalidrawAPI}
+          theme={canvasTheme}
+        />
+      )}
       {!readOnly && (
         <ShareDialog
           drawingId={drawingId}

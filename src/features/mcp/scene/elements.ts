@@ -60,8 +60,8 @@ export type ClusterBox = {
   parent: string | null
 }
 
-/** What an arrow can join. */
-export type Target = Shape | ClusterBox
+/** What an arrow can join: a new shape, a cluster, or a shape already drawn. */
+export type Target = { id: string; type: ShapeType; box: Box }
 
 export type Connector = {
   id: string
@@ -209,13 +209,17 @@ export function emitShape(shape: Shape, arrows: BoundElement[]) {
       roundness,
       boundElements: arrows,
     }),
-    shape.label && boundText(shape, shape.label),
+    shape.label && boundText(shape, shape.label, shape.style.strokeColor),
   )
 }
 
-// Excalidraw's computeBoundTextPosition: centered in the container's text box.
-function boundText(shape: Shape, label: Label) {
-  const { type, box } = shape
+/** Excalidraw's computeBoundTextPosition: centered in the container's text box. */
+export function boundText(
+  container: Target,
+  label: Label,
+  strokeColor: string,
+) {
+  const { type, box } = container
   const size = measureText(label.text, label.fontSize)
   let insetX = PADDING
   let insetY = PADDING
@@ -234,8 +238,8 @@ function boundText(shape: Shape, label: Label) {
       ...size,
     },
     label,
-    strokeColor: shape.style.strokeColor,
-    containerId: shape.id,
+    strokeColor,
+    containerId: container.id,
     textAlign: "center",
     verticalAlign: "middle",
     autoResize: true,
@@ -268,12 +272,12 @@ export function emitCluster(cluster: ClusterBox, arrows: BoundElement[]) {
   )
 }
 
-function center({ box }: Target): Point {
+export function center({ box }: Target): Point {
   return [box.x + box.width / 2, box.y + box.height / 2]
 }
 
 /** Where a ray from the target's center toward `toward` leaves its outline, plus the binding gap. */
-function outlinePoint(target: Target, toward: Point): Point {
+export function outlinePoint(target: Target, toward: Point): Point {
   const [cx, cy] = center(target)
   let dx = toward[0] - cx
   const dy = toward[1] - cy
@@ -393,25 +397,35 @@ export function emitConnector(connector: Connector) {
   }
   const { label } = connector
   if (type !== "arrow" || !label) return [element]
+  return withText(
+    element,
+    arrowLabel(connector.id, points, box.width, label, strokeColor),
+  )
+}
 
+/** An arrow's label, on its middle. `points` are absolute. */
+export function arrowLabel(
+  arrowId: string,
+  points: Point[],
+  arrowWidth: number,
+  label: Label,
+  strokeColor: string,
+) {
   // Excalidraw's getBoundTextMaxWidth for arrows.
-  const maxWidth = Math.max(box.width * 0.7, label.fontSize * 11)
+  const maxWidth = Math.max(arrowWidth * 0.7, label.fontSize * 11)
   const text = wrapText(label.original, label.fontSize, maxWidth)
   const size = measureText(text, label.fontSize)
   const [mx, my] = midpoint(points)
-  return withText(
-    element,
-    textElement({
-      id: newId(),
-      box: { x: mx - size.width / 2, y: my - size.height / 2, ...size },
-      label: { ...label, text },
-      strokeColor,
-      containerId: connector.id,
-      textAlign: "center",
-      verticalAlign: "middle",
-      autoResize: true,
-    }),
-  )
+  return textElement({
+    id: newId(),
+    box: { x: mx - size.width / 2, y: my - size.height / 2, ...size },
+    label: { ...label, text },
+    strokeColor,
+    containerId: arrowId,
+    textAlign: "center",
+    verticalAlign: "middle",
+    autoResize: true,
+  })
 }
 
 export function emitFreeText(text: FreeText) {
