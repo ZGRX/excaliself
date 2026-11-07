@@ -47,6 +47,7 @@ export async function resolveRoomForDrawing(
       userId: user.id,
       sessionId: session.session.id,
       displayName: memberDisplayName(user),
+      image: user.image ?? null,
     },
   }
 }

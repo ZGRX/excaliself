@@ -14,7 +14,7 @@ const color = { background: "#fa5252", stroke: "#c92a2a" }
 const badge = (drawingId: string, count: number): LiveDrawing => ({
   drawingId,
   count,
-  participants: [{ name: "Quiet Otter", color }],
+  participants: [{ name: "Quiet Otter", color, image: null }],
 })
 
 const snapshot = (...drawings: LiveDrawing[]): LiveSnapshot => ({

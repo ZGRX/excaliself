@@ -9,7 +9,6 @@ import {
   UserRound,
 } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
-import { InitialsAvatar } from "@/components/initials-avatar"
 import { LiveAvatarStack } from "@/components/live-badge"
 import { SpaceLabel } from "@/components/space-label"
 import {
@@ -24,6 +23,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { UserAvatar } from "@/components/user-avatar"
 import { useLiveDrawing } from "@/features/collab/queries"
 import {
   type Drawing,
@@ -270,7 +270,7 @@ function CreatorAvatar({ creator }: { creator: Drawing["creator"] }) {
         }
       >
         {creator ? (
-          <InitialsAvatar initials={creator.initials} />
+          <UserAvatar initials={creator.initials} image={creator.image} />
         ) : (
           <span
             aria-hidden

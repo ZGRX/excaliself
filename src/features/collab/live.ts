@@ -1,11 +1,11 @@
 // Live badge payload. A Map scan with no db reads, so a ~25 s poll is cheap.
 
 import { canAccess } from "@/features/spaces/access"
-import type { ParticipantColor } from "./protocol"
+import type { Participant } from "./protocol"
 import type { RoomRegistry } from "./room-session"
 
-/** Deliberately no userIds or images. */
-export type LiveParticipant = { name: string; color: ParticipantColor }
+/** Deliberately no userIds. */
+export type LiveParticipant = Pick<Participant, "name" | "color" | "image">
 
 export type LiveDrawing = {
   drawingId: string
@@ -40,8 +40,8 @@ export function liveFor(registry: RoomRegistry, userId: string): LiveSnapshot {
       if (seat.userId === userId) continue
       const key = seat.userId ?? connectionId
       if (people.has(key)) continue
-      const { name, color } = seat.participant
-      people.set(key, { name, color })
+      const { name, color, image } = seat.participant
+      people.set(key, { name, color, image })
       if (room.access.space === "team") inTeam.add(key)
     }
     if (people.size === 0) continue

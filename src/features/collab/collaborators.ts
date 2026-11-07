@@ -19,6 +19,7 @@ export function toCollaborators(input: {
       id: participant.connectionId,
       socketId,
       username: participant.name,
+      avatarUrl: participant.image ?? undefined,
       color: participant.color,
       pointer: cursor?.pointer,
       button: cursor?.button,

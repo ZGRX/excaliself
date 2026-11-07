@@ -33,6 +33,7 @@ export async function resolveRoomForToken(
       userId: user?.id ?? null,
       sessionId: session?.session.id ?? null,
       displayName: user ? memberDisplayName(user) : null,
+      image: user?.image ?? null,
     },
   }
 }

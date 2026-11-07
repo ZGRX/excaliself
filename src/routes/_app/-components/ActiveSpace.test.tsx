@@ -58,6 +58,7 @@ function renderApp(initialEntry: string) {
     email: "ada@example.com",
     name: "Ada",
     role: "user",
+    image: null,
     hasPassword: true,
     teamEnabled: true,
   })

@@ -91,8 +91,9 @@ const member = (displayName: string) => ({
   userId: `u:${displayName}`,
   sessionId: `s:${displayName}`,
   displayName,
+  image: null,
 })
-const guest = { userId: null, sessionId: null, displayName: null }
+const guest = { userId: null, sessionId: null, displayName: null, image: null }
 
 const rosterOf = (message: ServerMessage | undefined) =>
   message && "participants" in message.payload

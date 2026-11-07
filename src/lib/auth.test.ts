@@ -166,6 +166,7 @@ async function seat(roomId: string, owner: Device) {
     userId: owner.userId,
     sessionId: owner.sessionId,
     displayName: "Dave",
+    image: null,
   })
   // Draws one element named after the socket.
   const edit = JSON.stringify({

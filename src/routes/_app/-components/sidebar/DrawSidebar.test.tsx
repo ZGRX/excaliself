@@ -108,7 +108,7 @@ const drawing = (
   folderId: null,
   space: "private",
   createdBy: "user-1",
-  creator: { name: "Ada", initials: "A" },
+  creator: { name: "Ada", initials: "A", image: null },
   deletedBy: null,
   starred: false,
   deletedAt: null,
@@ -145,6 +145,7 @@ const user = (teamEnabled: boolean) => ({
   email: "ada@example.com",
   name: "Ada",
   role: "user" as const,
+  image: null,
   hasPassword: true,
   teamEnabled,
 })
@@ -178,6 +179,7 @@ function renderSidebar(teamEnabled: boolean) {
                 createdAt: new Date(),
                 email: "ada@example.com",
                 name: "Ada",
+                image: null,
                 isAdmin: false,
               }}
             />

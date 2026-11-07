@@ -1,3 +1,4 @@
+import { UserAvatar } from "@/components/user-avatar"
 import { initialsOf } from "@/features/collab/identity"
 import type { RoomPresence } from "@/features/collab/use-room"
 import { cn } from "@/lib/utils"
@@ -37,15 +38,19 @@ export function PresenceAvatars({
                 : `Follow ${participant.name}`
             }
             onClick={() => room.toggleFollow(participant)}
-            className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-[0.625rem] font-semibold text-white ring-2 ring-(--island-bg-color) transition-transform hover:scale-110"
+            className="h-7 w-7 cursor-pointer rounded-full ring-2 ring-(--island-bg-color) transition-transform hover:scale-110"
             style={{
-              backgroundColor: participant.color.background,
               boxShadow: followed
                 ? `0 0 0 4px ${participant.color.background}`
                 : undefined,
             }}
           >
-            {initialsOf(participant.name)}
+            <UserAvatar
+              initials={initialsOf(participant.name)}
+              image={participant.image}
+              className="size-full text-[0.625rem] text-white"
+              style={{ backgroundColor: participant.color.background }}
+            />
           </button>
         )
       })}

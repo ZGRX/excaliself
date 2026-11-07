@@ -199,6 +199,7 @@ function renderTrashPage(
     email: "ada@example.com",
     name: "Ada",
     role: "user" as const,
+    image: null,
     hasPassword: true,
     teamEnabled,
   }

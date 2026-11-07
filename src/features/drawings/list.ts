@@ -14,7 +14,7 @@ export async function listDrawings(db: Db, userId: string) {
   const rows = await db
     .select({
       ...drawingListColumns,
-      creatorUser: { name: users.name, email: users.email },
+      creatorUser: { name: users.name, email: users.email, image: users.image },
     })
     .from(drawings)
     .leftJoin(stars, starOf(userId))
@@ -28,6 +28,7 @@ export async function listDrawings(db: Db, userId: string) {
     creator: creatorUser && {
       name: userDisplayName(creatorUser),
       initials: userInitials(creatorUser),
+      image: creatorUser.image,
     },
   }))
 }

@@ -35,6 +35,18 @@ Each provider limits who can claim a domain:
 Deleting a member does not stop them from signing in again with SSO: an
 allowed domain recreates the account. Remove them in your provider too.
 
+## Profile photos
+
+A member who signs in with SSO shows their provider's profile photo: in the
+sidebar, the member list, on Team drawings they made, and on the canvas and
+live badges when they are in a drawing. Guests on a share link see it too.
+Each sign-in refreshes the photo, but not the name or email: those stay as the
+member set them in the app. Members without a photo show their initials.
+
+Google and OIDC photos load from the provider's own URL, so each viewer's
+browser asks the provider for the image. Microsoft sends the photo itself, and
+the app stores it.
+
 ## Set it up
 
 1. Set `BASE_URL` to the public URL.

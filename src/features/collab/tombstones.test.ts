@@ -118,6 +118,7 @@ test("SCENE_INIT leaves out month-old tombstones but keeps recent ones", async (
     userId: null,
     sessionId: null,
     displayName: "g",
+    image: null,
   })
 
   const init = guest.sent.find((m) => m.type === "SCENE_INIT")
@@ -143,6 +144,7 @@ test("a tab with a pre-delete copy is corrected after a save and reload", async 
     userId: demoAdmin.id,
     sessionId: "s:member",
     displayName: null,
+    image: null,
   })
 
   const stale = ["recent", "old"].map((id) => ({
@@ -183,6 +185,7 @@ test("a guest with a pre-delete copy gets only recent tombstones back", async ()
     userId: null,
     sessionId: null,
     displayName: "g",
+    image: null,
   })
 
   const stale = ["recent", "old"].map((id) => ({

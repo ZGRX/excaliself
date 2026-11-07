@@ -80,7 +80,7 @@ function makeDrawing(overrides: Partial<Drawing> = {}): Drawing {
     folderId: null,
     space: "private",
     createdBy: "user-1",
-    creator: { name: "Ada", initials: "A" },
+    creator: { name: "Ada", initials: "A", image: null },
     deletedBy: null,
     starred: false,
     deletedAt: null,

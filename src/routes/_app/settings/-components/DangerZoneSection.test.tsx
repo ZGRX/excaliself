@@ -33,6 +33,7 @@ const viewer: CurrentUser = {
   email: "ada@example.com",
   name: "",
   role: "user",
+  image: null,
   hasPassword: true,
   teamEnabled: false,
 }

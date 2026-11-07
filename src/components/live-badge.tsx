@@ -1,6 +1,7 @@
 // "Someone is in this drawing" badges. Ornament only: clicks fall through to
 // the row's link.
 
+import { UserAvatar } from "@/components/user-avatar"
 import { initialsOf } from "@/features/collab/identity"
 import type { LiveDrawing } from "@/features/collab/live"
 import { cn } from "@/lib/utils"
@@ -35,14 +36,14 @@ export function LiveAvatarStack({
       )}
     >
       {live.participants.map((participant, i) => (
-        <span
+        <UserAvatar
           // Names can repeat and there are no ids, so index is the key.
           key={i}
-          className="flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-semibold text-white ring-2 ring-card"
+          initials={initialsOf(participant.name)}
+          image={participant.image}
+          className="size-5 text-[9px] text-white ring-2 ring-card"
           style={{ backgroundColor: participant.color.background }}
-        >
-          {initialsOf(participant.name)}
-        </span>
+        />
       ))}
       {overflow > 0 && (
         <span className="flex h-5 items-center justify-center rounded-full bg-secondary px-1.5 text-[9px] font-semibold text-muted-foreground ring-2 ring-card">

@@ -40,6 +40,8 @@ export type ParticipantIdentity = {
   userId: string | null
   sessionId: string | null
   displayName: string | null
+  /** The member's `users.image`. Null for guests. */
+  image: string | null
 }
 
 export type SceneLoader = (roomId: string) => Promise<StoredScene>
@@ -374,6 +376,7 @@ export async function joinRoom(
     name: identity.displayName?.trim() || guestNameForConnection(peer.id),
     color: pickParticipantColor(rosterOf(room).map((p) => p.color)),
     isGuest,
+    image: identity.image,
   }
   room.seats.set(peer.id, {
     participant,

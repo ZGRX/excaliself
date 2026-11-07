@@ -60,7 +60,7 @@ function makeDrawing(overrides: Partial<Drawing> & { id: string }): Drawing {
     folderId: null,
     space: "private",
     createdBy: "user-1",
-    creator: { name: "Ada", initials: "A" },
+    creator: { name: "Ada", initials: "A", image: null },
     deletedBy: null,
     starred: false,
     deletedAt: null,
@@ -107,6 +107,7 @@ function makeClient({
     email: "ada@example.com",
     name: "Ada",
     role: "user",
+    image: null,
     hasPassword: true,
     teamEnabled,
   })

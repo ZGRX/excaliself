@@ -40,6 +40,8 @@ export const socialProviders: BetterAuthOptions["socialProviders"] = {
       clientId: google.GOOGLE_CLIENT_ID,
       clientSecret: google.GOOGLE_CLIENT_SECRET,
       prompt: "select_account",
+      // Each sign-in refreshes the photo. auth.ts keeps only `image`.
+      overrideUserInfoOnSignIn: true,
     },
   }),
   ...(microsoft && {
@@ -51,6 +53,7 @@ export const socialProviders: BetterAuthOptions["socialProviders"] = {
       // none is asked for or stored. User.Read fetches the profile photo.
       disableDefaultScope: true,
       scope: ["openid", "profile", "email", "User.Read"],
+      overrideUserInfoOnSignIn: true,
     },
   }),
 }
@@ -67,6 +70,7 @@ export const ssoPlugins = oidc
             clientId: oidc.OIDC_CLIENT_ID,
             clientSecret: oidc.OIDC_CLIENT_SECRET,
             scopes: ["openid", "email", "profile"],
+            overrideUserInfo: true,
           },
         ],
       }),

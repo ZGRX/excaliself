@@ -35,6 +35,7 @@ const user: CurrentUser = {
   email: "maciek@example.com",
   name: "",
   role: "user",
+  image: null,
   hasPassword: true,
   teamEnabled: false,
 }

@@ -3,7 +3,6 @@ import { useNavigate, useRouter } from "@tanstack/react-router"
 import { KeyRound, MoreHorizontal, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
-import { InitialsAvatar } from "@/components/initials-avatar"
 import { TypeToConfirmDialog } from "@/components/type-to-confirm-dialog"
 import {
   AlertDialog,
@@ -35,6 +34,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { UserAvatar } from "@/components/user-avatar"
 import { userDisplayName, userInitials } from "@/features/account/display-name"
 import {
   type CurrentUser,
@@ -133,9 +133,10 @@ export function MembersSection() {
             }`}
           >
             <div className="flex min-w-0 items-center gap-3">
-              <InitialsAvatar
+              <UserAvatar
                 initials={userInitials(member)}
-                className="h-7 w-7"
+                image={member.image}
+                className="size-7"
               />
               <div className="min-w-0">
                 <p className="truncate text-sm text-foreground">

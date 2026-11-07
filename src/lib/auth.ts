@@ -50,9 +50,16 @@ export const auth = betterAuth({
     enabled: true,
   },
   socialProviders,
-  // SSO is redirect-only. These hand a session holder the IdP's tokens,
-  // which outlive revoking that session.
-  disabledPaths: ["/get-access-token", "/refresh-token", "/account-info"],
+  // SSO is redirect-only. The first three hand a session holder the IdP's
+  // tokens, which outlive revoking that session. /update-user would let a
+  // member set any `image` for every viewer's browser to load; the app
+  // changes names through its own server fn.
+  disabledPaths: [
+    "/get-access-token",
+    "/refresh-token",
+    "/account-info",
+    "/update-user",
+  ],
   account: {
     accountLinking: {
       // Password members never verify their email (no SMTP). The provider's
@@ -91,6 +98,20 @@ export const auth = betterAuth({
             .where(eq(schema.oauthGrants.userId, account.userId))
           // Open sockets checked the session only when they joined.
           await evictUser(rooms, account.userId)
+        },
+      },
+    },
+    user: {
+      update: {
+        // SSO sign-in overrides the user with the IdP's profile (see sso.ts),
+        // only to refresh the photo. Name and email stay the member's own.
+        // Better Auth merges a returned `data`, so drop the keys in place.
+        // No photo from the IdP clears the old one.
+        before: async (user, ctx) => {
+          if (!ctx?.path.includes("/callback/") || !("image" in user)) return
+          for (const key of Object.keys(user))
+            if (key !== "image") delete user[key as keyof typeof user]
+          user.image ??= null
         },
       },
     },

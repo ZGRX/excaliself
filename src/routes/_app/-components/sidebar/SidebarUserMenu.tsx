@@ -1,6 +1,5 @@
 import { Link } from "@tanstack/react-router"
 import { LogOut, Settings, Users } from "lucide-react"
-import { InitialsAvatar } from "@/components/initials-avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,6 +7,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { UserAvatar } from "@/components/user-avatar"
 import { userDisplayName, userInitials } from "@/features/account/display-name"
 import { authClient } from "@/lib/auth-client"
 
@@ -16,6 +16,7 @@ export type SidebarUser = {
   createdAt: Date
   email: string
   name: string | null
+  image: string | null
   isAdmin: boolean
 }
 
@@ -33,7 +34,11 @@ export function SidebarUserMenu({ user }: { user: SidebarUser }) {
           />
         }
       >
-        <InitialsAvatar initials={userInitials(user)} className="h-5.5 w-5.5" />
+        <UserAvatar
+          initials={userInitials(user)}
+          image={user.image}
+          className="size-5.5"
+        />
         <span className="truncate text-[12px] opacity-60">{displayName}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent

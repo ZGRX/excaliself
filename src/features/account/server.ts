@@ -32,6 +32,7 @@ export const getCurrentUser = createServerFn({ method: "GET" })
           id: users.id,
           email: users.email,
           name: users.name,
+          image: users.image,
           role: users.role,
         })
         .from(users)

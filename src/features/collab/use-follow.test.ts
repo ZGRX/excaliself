@@ -42,6 +42,7 @@ const wren: Participant = {
   name: "Wren",
   color: { background: "#fa5252", stroke: "#c92a2a" },
   isGuest: true,
+  image: null,
 }
 
 /**

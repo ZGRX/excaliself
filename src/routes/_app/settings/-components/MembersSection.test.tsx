@@ -99,6 +99,7 @@ const viewer = {
   email: "ada@example.com",
   name: "",
   role: "admin" as const,
+  image: null,
   hasPassword: true,
   teamEnabled: false,
 }
@@ -230,7 +231,7 @@ test("members are listed by join date with display name, email, and joined date"
 
 test("every row carries the shared initials avatar", () => {
   const { container } = renderSection()
-  // InitialsAvatar is the decorative initials circle (aria-hidden span).
+  // UserAvatar is decorative (aria-hidden).
   expect(
     container.querySelectorAll("span[aria-hidden='true'].rounded-full"),
   ).toHaveLength(3)

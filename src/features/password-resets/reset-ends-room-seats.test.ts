@@ -57,6 +57,7 @@ test("a reset link hangs up the room seats of the sessions it ends", async () =>
     userId: demoAdmin.id,
     sessionId: "stolen-session",
     displayName: "Admin",
+    image: null,
   })
   await db.insert(sessions).values({
     id: "stolen-session",

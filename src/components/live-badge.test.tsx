@@ -11,6 +11,7 @@ const COLORS = ["#fa5252", "#4c6ef5", "#12b886", "#f59f00", "#7950f2"]
 const person = (name: string, i = 0): LiveParticipant => ({
   name,
   color: { background: COLORS[i % COLORS.length], stroke: "#000000" },
+  image: null,
 })
 
 const live = (names: string[], count = names.length): LiveDrawing => ({
@@ -31,8 +32,12 @@ test("each participant gets an initialed avatar in their own color", () => {
   render(<LiveAvatarStack live={live(["Ada Lovelace", "Quiet Otter"])} />)
 
   // The colors are the ones the cursors wear, so they have to survive intact.
-  expect(screen.getByText("AL").style.backgroundColor).toBe("rgb(250, 82, 82)")
-  expect(screen.getByText("QO").style.backgroundColor).toBe("rgb(76, 110, 245)")
+  expect(screen.getByText("AL").parentElement?.style.backgroundColor).toBe(
+    "rgb(250, 82, 82)",
+  )
+  expect(screen.getByText("QO").parentElement?.style.backgroundColor).toBe(
+    "rgb(76, 110, 245)",
+  )
 })
 
 test("the stack tails off into +N once it is past its cap", () => {

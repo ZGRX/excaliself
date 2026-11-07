@@ -10,7 +10,12 @@ vi.mock("@/features/shares/store", () => ({ resolveShareForRoom }))
 
 const db = {} as Parameters<typeof resolveRoomForToken>[0]
 const drawing = { id: "drawing-1", deletedAt: null }
-const ada = { id: "user-ada", name: "Ada Lovelace", email: "ada@x.dev" }
+const ada = {
+  id: "user-ada",
+  name: "Ada Lovelace",
+  email: "ada@x.dev",
+  image: "https://idp.example/ada.png",
+}
 
 const resolve = () => resolveRoomForToken(db, "token", new Headers())
 
@@ -30,6 +35,7 @@ test("a member joins the drawing's room under their session name", async () => {
       userId: "user-ada",
       sessionId: "session-ada",
       displayName: "Ada Lovelace",
+      image: "https://idp.example/ada.png",
     },
   })
 })
@@ -38,7 +44,12 @@ test("a guest joins an anyone link with no identity of its own", async () => {
   expect(await resolve()).toEqual({
     status: "ok",
     roomId: "drawing-1",
-    identity: { userId: null, sessionId: null, displayName: null },
+    identity: {
+      userId: null,
+      sessionId: null,
+      displayName: null,
+      image: null,
+    },
   })
 })
 

@@ -71,6 +71,7 @@ function AppShellLayout() {
                   createdAt: session.user.createdAt,
                   email: currentUser?.email ?? session.user?.email ?? "",
                   name: currentUser?.name ?? null,
+                  image: currentUser?.image ?? null,
                   isAdmin,
                 }}
               />

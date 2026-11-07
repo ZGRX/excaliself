@@ -12,7 +12,12 @@ type Row = {
   deletedAt: Date | null
 }
 
-const ada = { id: "user-ada", name: "Ada Lovelace", email: "ada@x.dev" }
+const ada = {
+  id: "user-ada",
+  name: "Ada Lovelace",
+  email: "ada@x.dev",
+  image: "https://idp.example/ada.png",
+}
 const teamDrawing: Row = {
   id: "drawing-1",
   space: "team",
@@ -48,6 +53,7 @@ test("a member joins a Team drawing's room under their session name", async () =
       userId: "user-ada",
       sessionId: "session-ada",
       displayName: "Ada Lovelace",
+      image: "https://idp.example/ada.png",
     },
   })
 })

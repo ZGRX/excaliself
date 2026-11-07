@@ -134,7 +134,8 @@ const PARTICIPANT = {
   connectionId: "peer-a",
   name: "Wren",
   color: { background: "#fa5252", stroke: "#c92a2a" },
-  isGuest: true,
+  isGuest: false,
+  image: "https://idp.example/wren.png",
 }
 
 test("ROOM_JOINED carries this tab's connection id and the roster", () => {

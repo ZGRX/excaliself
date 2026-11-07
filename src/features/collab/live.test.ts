@@ -39,11 +39,13 @@ const member = (userId: string, displayName: string) => ({
   userId,
   sessionId: `s:${userId}`,
   displayName,
+  image: null,
 })
 const guest = (displayName: string) => ({
   userId: null,
   sessionId: null,
   displayName,
+  image: null,
 })
 
 test("a room with someone else in it becomes one badge", async () => {
@@ -54,7 +56,9 @@ test("a room with someone else in it becomes one badge", async () => {
     {
       drawingId: "d1",
       count: 1,
-      participants: [{ name: "Quiet Otter", color: expect.anything() }],
+      participants: [
+        { name: "Quiet Otter", color: expect.anything(), image: null },
+      ],
     },
   ])
 })
@@ -73,7 +77,11 @@ test("the payload carries no userIds", async () => {
   await joinRoom(registry, "d1", fakePeer("p1"), member("u:ada", "Ada"))
 
   const [badge] = liveDrawingsFor(registry, OWNER)
-  expect(Object.keys(badge.participants[0]).sort()).toEqual(["color", "name"])
+  expect(Object.keys(badge.participants[0]).sort()).toEqual([
+    "color",
+    "image",
+    "name",
+  ])
 })
 
 test("drawings someone else owns are not the caller's business", async () => {
@@ -130,7 +138,9 @@ test("the owner's other tabs don't count either, but everyone else does", async 
     {
       drawingId: "d1",
       count: 1,
-      participants: [{ name: "Quiet Otter", color: expect.anything() }],
+      participants: [
+        { name: "Quiet Otter", color: expect.anything(), image: null },
+      ],
     },
   ])
 })
@@ -152,7 +162,7 @@ test("a member in two tabs is one person, one avatar", async () => {
     {
       drawingId: "d1",
       count: 1,
-      participants: [{ name: "Ada", color: expect.anything() }],
+      participants: [{ name: "Ada", color: expect.anything(), image: null }],
     },
   ])
 })

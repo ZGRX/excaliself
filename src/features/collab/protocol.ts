@@ -31,6 +31,8 @@ export type Participant = {
   name: string
   color: ParticipantColor
   isGuest: boolean
+  /** A member's SSO profile picture. Null for guests and members without one. */
+  image: string | null
 }
 
 export type PointerUpdate = {
@@ -245,7 +247,7 @@ function parseParticipants(value: unknown): Participant[] | null {
   const participants: Participant[] = []
   for (const entry of value) {
     if (!isRecord(entry)) return null
-    const { connectionId, name, color, isGuest } = entry
+    const { connectionId, name, color, isGuest, image } = entry
     if (typeof connectionId !== "string" || typeof name !== "string")
       return null
     if (!isRecord(color)) return null
@@ -259,6 +261,7 @@ function parseParticipants(value: unknown): Participant[] | null {
       name,
       color: { background: color.background, stroke: color.stroke },
       isGuest: isGuest === true,
+      image: typeof image === "string" ? image : null,
     })
   }
   return participants

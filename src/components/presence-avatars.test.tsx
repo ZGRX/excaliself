@@ -10,6 +10,7 @@ const participant = (name: string, i: number): Participant => ({
   name,
   color: { background: "#fa5252", stroke: "#c92a2a" },
   isGuest: true,
+  image: null,
 })
 
 const renderAvatars = (props: {
@@ -42,7 +43,9 @@ test("each person in the room gets an avatar in their cursor color", () => {
   })
   const ada = screen.getByTitle("Ada Lovelace")
   expect(ada.textContent).toBe("AL")
-  expect(ada.style.backgroundColor).toBe("rgb(250, 82, 82)")
+  expect((ada.firstElementChild as HTMLElement).style.backgroundColor).toBe(
+    "rgb(250, 82, 82)",
+  )
   expect(screen.getByTitle("Wren").textContent).toBe("W")
 })
 

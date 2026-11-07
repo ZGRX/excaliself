@@ -100,7 +100,7 @@ function makeDrawing(overrides: Partial<Drawing> & { id: string }): Drawing {
     folderId: null,
     space: "private",
     createdBy: "user-1",
-    creator: { name: "Ada", initials: "A" },
+    creator: { name: "Ada", initials: "A", image: null },
     deletedBy: null,
     starred: false,
     deletedAt: null,
@@ -261,7 +261,7 @@ test("a Team card shows its creator's initials, with their name on hover", async
         makeDrawing({
           id: "d1",
           space: "team",
-          creator: { name: "Ada Lovelace", initials: "AL" },
+          creator: { name: "Ada Lovelace", initials: "AL", image: null },
         }),
       ]}
     />,
