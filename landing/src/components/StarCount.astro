@@ -1,15 +1,54 @@
 ---
-// The star count inside a GitHub button. Renders nothing when the build could not fetch it.
+// The star count inside a GitHub button. Ships the build-time count; the browser swaps in the live one.
+// Stays hidden until some count is known.
 import Icon from "./Icon.astro"
-import { stars } from "../lib/stars"
+import { buildStars, formatStars } from "../lib/stars"
 
-const count = await stars
+const count = await buildStars
 ---
 
-{count && (
-  <span class="flex items-center gap-1 border-l border-current/20 pl-2.5 font-medium tabular-nums opacity-75">
-    <Icon name="star" size={15} />
-    {count}
-    <span class="sr-only">{" stars"}</span>
-  </span>
-)}
+<span
+  data-stars
+  hidden={count === null}
+  class="flex items-center gap-1 border-l border-current/20 pl-2.5 font-medium tabular-nums opacity-75"
+>
+  <Icon name="star" size={15} />
+  <span data-stars-count>{count !== null && formatStars(count)}</span>
+  <span class="sr-only">{" stars"}</span>
+</span>
+
+<script>
+  import { fetchStars, formatStars } from "../lib/stars"
+
+  const key = "excaliself-stars"
+  const hour = 60 * 60 * 1000
+
+  // A count saved in the last hour, so return visits skip GitHub. Storage can throw in private windows.
+  function saved(): number | null {
+    try {
+      const entry = JSON.parse(localStorage.getItem(key) ?? "null")
+      return typeof entry?.count === "number" && Date.now() - entry.at < hour ? entry.count : null
+    } catch {
+      return null
+    }
+  }
+
+  async function liveStars() {
+    const cached = saved()
+    if (cached !== null) return cached
+    const count = await fetchStars()
+    if (count === null) return null
+    try {
+      localStorage.setItem(key, JSON.stringify({ count, at: Date.now() }))
+    } catch {}
+    return count
+  }
+
+  liveStars().then((count) => {
+    if (count === null) return
+    for (const el of document.querySelectorAll<HTMLElement>("[data-stars]")) {
+      el.querySelector("[data-stars-count]")!.textContent = formatStars(count)
+      el.hidden = false
+    }
+  })
+</script>
