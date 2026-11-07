@@ -112,7 +112,15 @@ test("a roster change in the open room refreshes the badge before the next poll"
 
   vi.mocked(getLiveDrawings).mockResolvedValue(snapshot(badge("d1", 1)))
   rerender(
-    view([{ connectionId: "c2", name: "Quiet Otter", color, isGuest: false }]),
+    view([
+      {
+        connectionId: "c2",
+        name: "Quiet Otter",
+        image: null,
+        color,
+        isGuest: false,
+      },
+    ]),
   )
 
   await waitFor(() => {
