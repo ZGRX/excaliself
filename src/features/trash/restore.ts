@@ -52,38 +52,59 @@ export async function restoreDrawingUnit(
 ): Promise<{ originalFolderGone: boolean }> {
   return db.transaction(async (tx) => {
     await lockFolderTree(tx, "place")
-    const [restored] = await tx
-      .update(drawings)
-      .set(UNTRASHED)
-      .where(
-        and(
-          eq(drawings.id, id),
-          accessibleTo(drawings, userId),
-          isNotNull(drawings.deletedAt),
-        ),
-      )
-      .returning({
-        id: drawings.id,
-        folderId: drawings.folderId,
-        space: drawings.space,
-      })
-    if (!restored) throw new Error("Drawing not found")
-    if (!restored.folderId) return { originalFolderGone: false }
-
-    const { landingId, originalGone } = await findLanding(
-      tx,
-      userId,
-      restored.space,
-      restored.folderId,
-    )
-    if (landingId !== restored.folderId) {
-      await tx
-        .update(drawings)
-        .set({ folderId: landingId })
-        .where(eq(drawings.id, id))
-    }
-    return { originalFolderGone: originalGone }
+    return restoreDrawingInTx(tx, userId, id)
   })
+}
+
+/** Restores trashed drawings together, all or nothing; see restoreDrawingUnit. */
+export async function restoreDrawingUnits(
+  db: Db,
+  userId: string,
+  ids: string[],
+): Promise<void> {
+  await db.transaction(async (tx) => {
+    await lockFolderTree(tx, "place")
+    for (const id of ids) await restoreDrawingInTx(tx, userId, id)
+  })
+}
+
+// restoreDrawingUnit's body. Call it under the "place" lock.
+async function restoreDrawingInTx(
+  tx: Tx,
+  userId: string,
+  id: string,
+): Promise<{ originalFolderGone: boolean }> {
+  const [restored] = await tx
+    .update(drawings)
+    .set(UNTRASHED)
+    .where(
+      and(
+        eq(drawings.id, id),
+        accessibleTo(drawings, userId),
+        isNotNull(drawings.deletedAt),
+      ),
+    )
+    .returning({
+      id: drawings.id,
+      folderId: drawings.folderId,
+      space: drawings.space,
+    })
+  if (!restored) throw new Error("Drawing not found")
+  if (!restored.folderId) return { originalFolderGone: false }
+
+  const { landingId, originalGone } = await findLanding(
+    tx,
+    userId,
+    restored.space,
+    restored.folderId,
+  )
+  if (landingId !== restored.folderId) {
+    await tx
+      .update(drawings)
+      .set({ folderId: landingId })
+      .where(eq(drawings.id, id))
+  }
+  return { originalFolderGone: originalGone }
 }
 
 /**

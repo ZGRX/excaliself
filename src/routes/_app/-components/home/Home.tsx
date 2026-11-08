@@ -66,6 +66,7 @@ export function Home({ isAdmin }: { isAdmin: boolean }) {
           loadingLabel="Loading recent drawings"
           onTrash={trashDrawing}
           onMoveToTeam={requestMoveToTeam}
+          selectable
           empty={
             space === "team" ? (
               <TeamEmpty onCreate={openCreateDrawingDialog} />

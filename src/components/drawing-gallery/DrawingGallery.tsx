@@ -12,7 +12,7 @@ import {
   UserRound,
   Users,
 } from "lucide-react"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react"
 import { LiveAvatarStack } from "@/components/live-badge"
 import { RenameDialog } from "@/components/rename-dialog"
 import { SpaceLabel } from "@/components/space-label"
@@ -43,6 +43,8 @@ import { useDelayedVisible } from "@/hooks/use-delayed-visible"
 import { formatAgo } from "@/lib/relative-time"
 import { cn } from "@/lib/utils"
 import { compareDrawings, DEFAULT_SORT, type SortOrder } from "./browse"
+import { SelectionCheckbox } from "./SelectionCheckbox"
+import { useGallerySelection } from "./selection"
 
 // Shared with TrashGallery so browse and trash stay one grid language.
 export const GRID_CLASS =
@@ -58,6 +60,11 @@ export const CARD_HOVER_CLASS =
   "transition-[box-shadow,border-color,scale] duration-150 hover:border-card-border-hover hover:shadow-card-hover"
 
 const DEFAULT_SKELETON_COUNT = 8
+
+// Loaded with the first selection: it brings the bulk mutations along
+const SelectionBar = lazy(() =>
+  import("./SelectionBar").then((m) => ({ default: m.SelectionBar })),
+)
 
 // Client-only: @excalidraw/excalidraw is not server-safe, and this keeps it
 // out of the server bundle and the gallery's initial chunk
@@ -79,6 +86,7 @@ export function DrawingGallery({
   loadingLabel,
   onTrash,
   onMoveToTeam,
+  selectable = false,
   empty,
 }: {
   /** Any order — the server sorts, but autosave patches cache rows in place
@@ -105,6 +113,8 @@ export function DrawingGallery({
   /** Card overflow action "Move to Team" on private cards — pages pass
    * `requestMoveToTeam`, which is null while Team is hidden. */
   onMoveToTeam?: ((item: MoveItem, name: string) => void) | null
+  /** Cards get select boxes and the grid a bulk action bar. */
+  selectable?: boolean
   /** Rendered when loading settles on zero drawings. */
   empty: React.ReactNode
 }) {
@@ -116,6 +126,10 @@ export function DrawingGallery({
     const ordered = [...drawings].sort(compareDrawings(sort, query))
     return limit === undefined ? ordered : ordered.slice(0, limit)
   }, [drawings, limit, sort, query])
+
+  const order = useMemo(() => sorted.map((drawing) => drawing.id), [sorted])
+  const selection = useGallerySelection(order)
+  const selecting = selection.selected.size > 0
 
   const foldersById = useMemo(
     () => new Map((folders ?? []).map((folder) => [folder.id, folder])),
@@ -134,22 +148,43 @@ export function DrawingGallery({
   if (sorted.length === 0) return <>{empty}</>
 
   return (
-    // Mount fade so the swap from skeletons isn't a single-frame pop.
-    // Reduced-motion keeps it: opacity-only is already the gentle form.
-    <div className={cn(GRID_CLASS, "animate-in fade-in-0 duration-200")}>
-      {sorted.map((drawing) => (
-        <DrawingCard
-          key={drawing.id}
-          drawing={drawing}
-          folder={
-            drawing.folderId ? foldersById.get(drawing.folderId) : undefined
-          }
-          spaceLabel={spaceLabels}
-          onTrash={() => onTrash(drawing)}
-          onMoveToTeam={onMoveToTeam}
-        />
-      ))}
-    </div>
+    <>
+      {/* Mount fade so the swap from skeletons isn't a single-frame pop.
+          Reduced-motion keeps it: opacity-only is already the gentle form. */}
+      <div className={cn(GRID_CLASS, "animate-in fade-in-0 duration-200")}>
+        {sorted.map((drawing) => (
+          <DrawingCard
+            key={drawing.id}
+            drawing={drawing}
+            folder={
+              drawing.folderId ? foldersById.get(drawing.folderId) : undefined
+            }
+            spaceLabel={spaceLabels}
+            onTrash={() => onTrash(drawing)}
+            onMoveToTeam={onMoveToTeam}
+            selection={
+              selectable
+                ? {
+                    checked: selection.selected.has(drawing.id),
+                    selecting,
+                    onToggle: (extend) => selection.toggle(drawing.id, extend),
+                  }
+                : undefined
+            }
+          />
+        ))}
+      </div>
+      {selecting && (
+        <Suspense fallback={null}>
+          <SelectionBar
+            selected={sorted.filter((d) => selection.selected.has(d.id))}
+            total={sorted.length}
+            onSelectAll={selection.selectAll}
+            onClear={selection.clear}
+          />
+        </Suspense>
+      )}
+    </>
   )
 }
 
@@ -190,12 +225,18 @@ function DrawingCard({
   spaceLabel,
   onTrash,
   onMoveToTeam,
+  selection,
 }: {
   drawing: Drawing
   folder?: Folder
   spaceLabel: boolean
   onTrash: () => void
   onMoveToTeam?: ((item: MoveItem, name: string) => void) | null
+  selection?: {
+    checked: boolean
+    selecting: boolean
+    onToggle: (extend: boolean) => void
+  }
 }) {
   // Per card so a poll result re-renders only the changed card.
   const live = useLiveDrawing(drawing.id)
@@ -206,6 +247,7 @@ function DrawingCard({
         CARD_FRAME_CLASS,
         CARD_HOVER_CLASS,
         "group active:scale-[0.99]",
+        selection?.checked && "border-iris ring-1 ring-iris hover:border-iris",
       )}
     >
       <Link
@@ -213,11 +255,25 @@ function DrawingCard({
         params={{ id: drawing.id }}
         aria-label={drawing.name}
         className="absolute inset-0 rounded-card"
+        // While selecting, a click on the card selects instead of opening
+        onClick={(event) => {
+          if (!selection?.selecting) return
+          event.preventDefault()
+          selection.onToggle(event.shiftKey)
+        }}
       />
       {/* `relative` paints this above the stretched link; pointer-events-none
           lets clicks reach it. */}
       <div className="pointer-events-none relative aspect-[4/3] overflow-hidden border-b border-hairline">
         <Preview drawing={drawing} />
+        {selection && (
+          <SelectionCheckbox
+            name={drawing.name}
+            checked={selection.checked}
+            selecting={selection.selecting}
+            onToggle={selection.onToggle}
+          />
+        )}
         <LiveAvatarStack
           live={live}
           className="absolute bottom-2 left-2 animate-in fade-in-0 zoom-in-95 duration-200"

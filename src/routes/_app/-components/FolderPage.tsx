@@ -87,6 +87,7 @@ export function FolderPage({ folderId }: { folderId: string }) {
           loadingLabel="Loading drawings"
           onTrash={trashDrawing}
           onMoveToTeam={requestMoveToTeam}
+          selectable
           empty={
             trimmedQuery !== "" ? (
               <NoMatches query={trimmedQuery} />

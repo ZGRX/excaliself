@@ -106,6 +106,7 @@ export function AllDrawings({ isAdmin }: { isAdmin: boolean }) {
           loadingLabel="Loading drawings"
           onTrash={trashDrawing}
           onMoveToTeam={requestMoveToTeam}
+          selectable
           empty={
             hasAnyDrawings ? (
               <FilteredEmpty
