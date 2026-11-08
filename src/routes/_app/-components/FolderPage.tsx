@@ -17,6 +17,7 @@ import { drawingsQueryOptions } from "@/features/drawings/queries"
 import { foldersQueryOptions } from "@/features/folders/queries"
 import { useDocumentTitle } from "@/lib/document-title"
 import { useCreateDialog } from "./CreateDialog"
+import { useMoveToTeamDialog } from "./MoveToTeamDialog"
 
 // The folder page (spec §5.3): browse scoped to one folder — same grid and
 // toolbar as /drawings, with the chip row hidden and no folder attribution
@@ -26,6 +27,7 @@ export function FolderPage({ folderId }: { folderId: string }) {
   const { data: folders = [] } = useQuery(foldersQueryOptions())
   const { openCreateDrawingDialog } = useCreateDialog()
   const trashDrawing = useTrashDrawing()
+  const { requestMoveToTeam } = useMoveToTeamDialog()
   const navigate = useNavigate()
 
   const folder = folders.find((candidate) => candidate.id === folderId)
@@ -84,6 +86,7 @@ export function FolderPage({ folderId }: { folderId: string }) {
           query={query}
           loadingLabel="Loading drawings"
           onTrash={trashDrawing}
+          onMoveToTeam={requestMoveToTeam}
           empty={
             trimmedQuery !== "" ? (
               <NoMatches query={trimmedQuery} />

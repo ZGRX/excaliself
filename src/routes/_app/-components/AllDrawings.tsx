@@ -23,6 +23,7 @@ import { foldersQueryOptions } from "@/features/folders/queries"
 import { inBrowsedSpace, useBrowsedSpace } from "@/features/spaces/browse"
 import { useDocumentTitle } from "@/lib/document-title"
 import { useCreateDialog } from "./CreateDialog"
+import { useMoveToTeamDialog } from "./MoveToTeamDialog"
 
 // The browse surface: every drawing of the browsed space, in Home's card
 // language, under the toolbar (on-page search, folder chips, sort — spec §5.2).
@@ -41,6 +42,7 @@ export function AllDrawings({ isAdmin }: { isAdmin: boolean }) {
   )
   const { openCreateDrawingDialog } = useCreateDialog()
   const trashDrawing = useTrashDrawing()
+  const { requestMoveToTeam } = useMoveToTeamDialog()
   useDocumentTitle("All drawings", { chrome: true })
 
   const [query, setQuery] = useState("")
@@ -103,6 +105,7 @@ export function AllDrawings({ isAdmin }: { isAdmin: boolean }) {
           spaceLabels={searchesBothSpaces}
           loadingLabel="Loading drawings"
           onTrash={trashDrawing}
+          onMoveToTeam={requestMoveToTeam}
           empty={
             hasAnyDrawings ? (
               <FilteredEmpty

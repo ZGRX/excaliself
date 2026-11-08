@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Kbd } from "@/components/ui/kbd"
 import { useRenameDrawing } from "@/features/drawings/mutations"
 import { useRenameFolder } from "@/features/folders/mutations"
+import { useDeferredFocusSelect } from "@/hooks/use-deferred-focus-select"
 
 export type RenameTarget = {
   kind: "drawing" | "folder"
@@ -32,6 +33,10 @@ export function RenameDialog({
   const renameFolderMutation = useRenameFolder()
   const [name, setName] = useState(target.name)
   const inputRef = useRef<HTMLInputElement | null>(null)
+  // The whole dialog exists to type a name into — focus it on open, with the
+  // current name selected so typing replaces it. Deferred: an autoFocus'd
+  // input's onFocus never fires, and a closing menu would steal focus back.
+  useDeferredFocusSelect(inputRef, open)
 
   // The host keeps this component mounted across opens — refill from the
   // current name on every open so a previous edit can't leak into the next
@@ -67,10 +72,6 @@ export function RenameDialog({
           <Pencil className="h-4 w-4 shrink-0 text-iris" strokeWidth={2.5} />
           <input
             ref={inputRef}
-            // The whole dialog exists to type a name into — focus it on
-            // open, with the current name selected so typing replaces it
-            autoFocus
-            onFocus={() => inputRef.current?.select()}
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => {

@@ -33,6 +33,11 @@ vi.mock("./CreateDialog", () => ({
   useCreateDialog: () => ({ openCreateDrawingDialog, openCreateFolderDialog }),
 }))
 
+// The confirm and its Team gate are covered by MoveToTeamDialog.test
+vi.mock("./MoveToTeamDialog", () => ({
+  useMoveToTeamDialog: () => ({ requestMoveToTeam: null }),
+}))
+
 vi.mock("@tanstack/react-router", () => ({
   Link: ({
     to,
@@ -68,13 +73,16 @@ vi.mock("@/features/drawings/server", () => ({
   getDrawingScene: vi.fn(async () => "{}"),
   getDrawings: vi.fn(),
   getDrawingWithFiles: vi.fn(),
-  // The gallery's Move to trash wiring (useTrashDrawing) binds these
+  // The gallery card menu (trash, star, rename) binds these
   trashDrawing: vi.fn(),
   restoreDrawing: vi.fn(),
+  setDrawingStarred: vi.fn(),
+  updateDrawing: vi.fn(),
 }))
 
 vi.mock("@/features/folders/server", () => ({
   getFolders: vi.fn(),
+  updateFolder: vi.fn(),
 }))
 
 beforeEach(() => {

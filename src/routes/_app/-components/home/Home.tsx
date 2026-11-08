@@ -11,6 +11,7 @@ import { foldersQueryOptions } from "@/features/folders/queries"
 import { inBrowsedSpace, useBrowsedSpace } from "@/features/spaces/browse"
 import { cn } from "@/lib/utils"
 import { useCreateDialog } from "../CreateDialog"
+import { useMoveToTeamDialog } from "../MoveToTeamDialog"
 
 const RECENT_LIMIT = 8
 
@@ -22,6 +23,7 @@ export function Home({ isAdmin }: { isAdmin: boolean }) {
   const folders = inBrowsedSpace(allFolders, space)
   const { openCreateDrawingDialog } = useCreateDialog()
   const trashDrawing = useTrashDrawing()
+  const { requestMoveToTeam } = useMoveToTeamDialog()
 
   return (
     <div className="h-full overflow-y-auto">
@@ -63,6 +65,7 @@ export function Home({ isAdmin }: { isAdmin: boolean }) {
           limit={RECENT_LIMIT}
           loadingLabel="Loading recent drawings"
           onTrash={trashDrawing}
+          onMoveToTeam={requestMoveToTeam}
           empty={
             space === "team" ? (
               <TeamEmpty onCreate={openCreateDrawingDialog} />

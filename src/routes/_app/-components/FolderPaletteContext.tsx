@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
 import { File, Pencil, Trash2 } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
+import { RenameDialog } from "@/components/rename-dialog"
 import { useTrashFolder } from "@/features/folders/mutations"
 import { foldersQueryOptions } from "@/features/folders/queries"
 import {
@@ -9,7 +10,6 @@ import {
   usePaletteContextSection,
 } from "./CommandPalette"
 import { useCreateDialog } from "./CreateDialog"
-import { RenameDialog } from "./RenameDialog"
 
 type FolderPaletteContextProps = {
   folderId: string

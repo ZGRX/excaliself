@@ -14,8 +14,9 @@ has a second member, or once Team holds something.
 
 ## Move work to Team
 
-Use **Move to Team** on a private drawing or on a folder in the sidebar. All
-members can then see and edit it. A folder moves with everything in it.
+Use **Move to Team** on a private drawing or folder in the sidebar, or in the
+**⋯** menu of a private drawing card. All members can then see and edit it. A
+folder moves with everything in it.
 
 The move is one-way: you cannot move an item back to Private.
 

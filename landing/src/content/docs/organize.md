@@ -10,6 +10,9 @@ appear in the sidebar. **Home** shows your recent drawings, ordered by when they
 were last edited. **All drawings** shows them all. Drawing and folder names
 can be up to 1,000 characters.
 
+Each drawing card has a **⋯** menu, like each row in the sidebar. Use it to
+**Star** or **Unstar**, **Rename**, **Move to Team**, or **Move to trash**.
+
 ## Search
 
 Search finds drawings by title and by the text inside them. It is in the toolbar

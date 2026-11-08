@@ -5,9 +5,11 @@ import {
   fireEvent,
   render as renderBare,
   screen,
+  waitFor,
 } from "@testing-library/react"
 import { afterEach, beforeAll, beforeEach, expect, test, vi } from "vitest"
 import type { Drawing } from "@/features/drawings/queries"
+import { setDrawingStarred, updateDrawing } from "@/features/drawings/server"
 import type { Folder } from "@/features/folders/queries"
 import { DrawingGallery } from "./DrawingGallery"
 import { renderPreviewSvg } from "./preview"
@@ -21,7 +23,12 @@ vi.mock("@/features/collab/server", () => ({
 // Each card fetches its own scene for the preview.
 vi.mock("@/features/drawings/server", () => ({
   getDrawingScene: vi.fn(async () => "{}"),
+  setDrawingStarred: vi.fn(async () => {}),
+  updateDrawing: vi.fn(async () => {}),
 }))
+
+// The rename dialog also renames folders; cards never do.
+vi.mock("@/features/folders/server", () => ({ updateFolder: vi.fn() }))
 
 /**
  * Every card runs the live poll's `useQuery`, so it needs a client — and
@@ -383,6 +390,98 @@ test("the card overflow menu moves its drawing to trash without a confirm dialog
   expect(onTrash).toHaveBeenCalledTimes(1)
   expect(onTrash).toHaveBeenCalledWith(drawings[1])
   expect(screen.queryByRole("alertdialog")).toBeNull()
+})
+
+// jsdom has no real pointer events; the pointerdown+click pair opens the menu
+function openActions(name: string) {
+  const trigger = screen.getByRole("button", { name: `Actions for ${name}` })
+  fireEvent.pointerDown(trigger)
+  fireEvent.click(trigger)
+}
+
+test("the card menu stars and unstars, labelled by current state", async () => {
+  render(
+    <DrawingGallery
+      {...defaultProps}
+      drawings={[
+        makeDrawing({ id: "d1", name: "Plain" }),
+        makeDrawing({ id: "d2", name: "Fave", starred: true }),
+      ]}
+    />,
+  )
+
+  openActions("Plain")
+  fireEvent.click(screen.getByRole("menuitem", { name: "Star" }))
+  openActions("Fave")
+  fireEvent.click(screen.getByRole("menuitem", { name: "Unstar" }))
+
+  await waitFor(() =>
+    expect(
+      vi.mocked(setDrawingStarred).mock.calls.map(([vars]) => vars),
+    ).toEqual([
+      { data: { id: "d1", starred: true } },
+      { data: { id: "d2", starred: false } },
+    ]),
+  )
+})
+
+test("the card menu renames through the rename dialog", async () => {
+  render(
+    <DrawingGallery
+      {...defaultProps}
+      drawings={[makeDrawing({ id: "d1", name: "Old name" })]}
+    />,
+  )
+
+  openActions("Old name")
+  fireEvent.click(screen.getByRole("menuitem", { name: "Rename" }))
+  const input = screen.getByDisplayValue("Old name")
+  fireEvent.change(input, { target: { value: "New name" } })
+  fireEvent.keyDown(input, { key: "Enter" })
+
+  await waitFor(() =>
+    expect(vi.mocked(updateDrawing).mock.calls[0]?.[0]).toEqual({
+      data: { id: "d1", updateData: { name: "New name" } },
+    }),
+  )
+})
+
+// Same rule as the sidebar: only private drawings, only while Team shows
+// (pages pass a null `requestMoveToTeam` otherwise).
+test("Move to Team shows on private cards only, and only when wired", () => {
+  const onMoveToTeam = vi.fn()
+  const drawings = [
+    makeDrawing({ id: "d1", name: "Mine" }),
+    makeDrawing({ id: "d2", name: "Shared", space: "team" }),
+  ]
+  const { rerender } = render(
+    <DrawingGallery
+      {...defaultProps}
+      drawings={drawings}
+      onMoveToTeam={onMoveToTeam}
+    />,
+  )
+
+  openActions("Shared")
+  expect(screen.queryByRole("menuitem", { name: "Move to Team" })).toBeNull()
+  fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" })
+
+  openActions("Mine")
+  fireEvent.click(screen.getByRole("menuitem", { name: "Move to Team" }))
+  expect(onMoveToTeam).toHaveBeenCalledWith(
+    { type: "drawing", id: "d1" },
+    "Mine",
+  )
+
+  rerender(
+    <DrawingGallery
+      {...defaultProps}
+      drawings={drawings}
+      onMoveToTeam={null}
+    />,
+  )
+  openActions("Mine")
+  expect(screen.queryByRole("menuitem", { name: "Move to Team" })).toBeNull()
 })
 
 test("every card gets its own actions trigger", () => {

@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
 import { FolderInput, Pencil, Star, StarOff, Trash2 } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
+import { RenameDialog } from "@/components/rename-dialog"
 import {
   useMoveDrawingToFolder,
   useToggleStarDrawing,
@@ -12,7 +13,6 @@ import {
   type PaletteContextSection,
   usePaletteContextSection,
 } from "./CommandPalette"
-import { RenameDialog } from "./RenameDialog"
 
 type DrawingPaletteContextProps = {
   drawingId: string

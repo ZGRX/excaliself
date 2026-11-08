@@ -5,16 +5,21 @@ import {
   Folder as FolderIcon,
   MoreHorizontal,
   Pencil,
+  Star,
+  StarOff,
   Trash2,
   UserRound,
+  Users,
 } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { LiveAvatarStack } from "@/components/live-badge"
+import { RenameDialog } from "@/components/rename-dialog"
 import { SpaceLabel } from "@/components/space-label"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -25,11 +30,13 @@ import {
 } from "@/components/ui/tooltip"
 import { UserAvatar } from "@/components/user-avatar"
 import { useLiveDrawing } from "@/features/collab/queries"
+import { useToggleStarDrawing } from "@/features/drawings/mutations"
 import {
   type Drawing,
   drawingSceneQueryOptions,
 } from "@/features/drawings/queries"
 import type { Folder } from "@/features/folders/queries"
+import type { MoveItem } from "@/features/spaces/move-to-team"
 import { useDelayedVisible } from "@/hooks/use-delayed-visible"
 import { formatAgo } from "@/lib/relative-time"
 import { cn } from "@/lib/utils"
@@ -69,6 +76,7 @@ export function DrawingGallery({
   spaceLabels = false,
   loadingLabel,
   onTrash,
+  onMoveToTeam,
   empty,
 }: {
   /** Any order — the server sorts, but autosave patches cache rows in place
@@ -92,6 +100,9 @@ export function DrawingGallery({
    * identical everywhere — pages wire `useTrashDrawing`, which removes the
    * card optimistically and shows the undo toast itself. No confirm dialog. */
   onTrash: (drawing: Drawing) => void
+  /** Card overflow action "Move to Team" on private cards — pages pass
+   * `requestMoveToTeam`, which is null while Team is hidden. */
+  onMoveToTeam?: ((item: MoveItem, name: string) => void) | null
   /** Rendered when loading settles on zero drawings. */
   empty: React.ReactNode
 }) {
@@ -133,6 +144,7 @@ export function DrawingGallery({
           }
           spaceLabel={spaceLabels}
           onTrash={() => onTrash(drawing)}
+          onMoveToTeam={onMoveToTeam}
         />
       ))}
     </div>
@@ -175,11 +187,13 @@ function DrawingCard({
   folder,
   spaceLabel,
   onTrash,
+  onMoveToTeam,
 }: {
   drawing: Drawing
   folder?: Folder
   spaceLabel: boolean
   onTrash: () => void
+  onMoveToTeam?: ((item: MoveItem, name: string) => void) | null
 }) {
   // Per card so a poll result re-renders only the changed card.
   const live = useLiveDrawing(drawing.id)
@@ -244,7 +258,19 @@ function DrawingCard({
             </span>
           </span>
         </div>
-        <CardActions name={drawing.name} onTrash={onTrash} />
+        <CardActions
+          drawing={drawing}
+          onTrash={onTrash}
+          onMoveToTeam={
+            onMoveToTeam && drawing.space === "private"
+              ? () =>
+                  onMoveToTeam(
+                    { type: "drawing", id: drawing.id },
+                    drawing.name,
+                  )
+              : undefined
+          }
+        />
       </div>
     </div>
   )
@@ -288,31 +314,79 @@ function CreatorAvatar({ creator }: { creator: Drawing["creator"] }) {
 // The card's overflow menu — z-layered above the stretched drawing link,
 // hidden until hover/focus when the primary pointer is a mouse. Gated on
 // pointer capability, not viewport width: a touch-only tablet at desktop
-// width has no hover to reveal it, so there it stays visible.
-function CardActions({ name, onTrash }: { name: string; onTrash: () => void }) {
+// width has no hover to reveal it, so there it stays visible. Items and
+// labels match the sidebar row menu.
+function CardActions({
+  drawing,
+  onTrash,
+  onMoveToTeam,
+}: {
+  drawing: Drawing
+  onTrash: () => void
+  onMoveToTeam?: () => void
+}) {
+  const name = drawing.name
+  const starMutation = useToggleStarDrawing()
+  const [renameOpen, setRenameOpen] = useState(false)
+
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <button
-            type="button"
-            aria-label={`Actions for ${name}`}
-            className="relative z-10 -mr-1.5 shrink-0 rounded-md p-1 text-muted-foreground/50 transition-[color,background-color,opacity] duration-150 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground focus-visible:outline-none pointer-fine:opacity-0 pointer-fine:group-focus-within:opacity-100 pointer-fine:group-hover:opacity-100 pointer-fine:data-popup-open:opacity-100"
-          />
-        }
-      >
-        <MoreHorizontal className="h-4 w-4" />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem
-          onClick={onTrash}
-          className="text-destructive focus:text-destructive"
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <button
+              type="button"
+              aria-label={`Actions for ${name}`}
+              className="relative z-10 -mr-1.5 shrink-0 rounded-md p-1 text-muted-foreground/50 transition-[color,background-color,opacity] duration-150 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground focus-visible:outline-none pointer-fine:opacity-0 pointer-fine:group-focus-within:opacity-100 pointer-fine:group-hover:opacity-100 pointer-fine:data-popup-open:opacity-100"
+            />
+          }
         >
-          <Trash2 className="mr-2 h-4 w-4" />
-          Move to trash
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+          <MoreHorizontal className="h-4 w-4" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem
+            onClick={() =>
+              starMutation.mutate({
+                data: { id: drawing.id, starred: !drawing.starred },
+              })
+            }
+          >
+            {drawing.starred ? (
+              <StarOff className="mr-2 h-4 w-4" />
+            ) : (
+              <Star className="mr-2 h-4 w-4" />
+            )}
+            {drawing.starred ? "Unstar" : "Star"}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setRenameOpen(true)}>
+            <Pencil className="mr-2 h-4 w-4" />
+            Rename
+          </DropdownMenuItem>
+          {onMoveToTeam && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={onMoveToTeam}>
+                <Users className="mr-2 h-4 w-4" />
+                Move to Team
+              </DropdownMenuItem>
+            </>
+          )}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onClick={onTrash}
+            className="text-destructive focus:text-destructive"
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Move to trash
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <RenameDialog
+        open={renameOpen}
+        onOpenChange={setRenameOpen}
+        target={{ kind: "drawing", id: drawing.id, name }}
+      />
+    </>
   )
 }
 
