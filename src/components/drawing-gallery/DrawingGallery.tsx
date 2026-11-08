@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
 import { createClientOnlyFn } from "@tanstack/react-start"
 import {
+  Download,
   Folder as FolderIcon,
   MoreHorizontal,
   Pencil,
@@ -30,6 +31,7 @@ import {
 } from "@/components/ui/tooltip"
 import { UserAvatar } from "@/components/user-avatar"
 import { useLiveDrawing } from "@/features/collab/queries"
+import { exportDrawing } from "@/features/drawings/export"
 import { useToggleStarDrawing } from "@/features/drawings/mutations"
 import {
   type Drawing,
@@ -361,6 +363,10 @@ function CardActions({
           <DropdownMenuItem onClick={() => setRenameOpen(true)}>
             <Pencil className="mr-2 h-4 w-4" />
             Rename
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => exportDrawing(drawing)}>
+            <Download className="mr-2 h-4 w-4" />
+            Export .excalidraw
           </DropdownMenuItem>
           {onMoveToTeam && (
             <>

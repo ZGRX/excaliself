@@ -4,6 +4,7 @@ import { LiveCountChip } from "@/components/live-badge"
 import { Input } from "@/components/ui/input"
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar"
 import { useLiveDrawing } from "@/features/collab/queries"
+import { exportDrawing } from "@/features/drawings/export"
 import {
   useRenameDrawing,
   useToggleStarDrawing,
@@ -118,6 +119,7 @@ export function DrawingItem({ drawing }: DrawingItemProps) {
         onStartRename={() => rename.start(drawing.name)}
         menuFinalFocus={rename.menuFinalFocus}
         onTrash={handleTrash}
+        onExport={() => exportDrawing(drawing)}
         onMoveToTeam={
           requestMoveToTeam && drawing.space === "private"
             ? () =>

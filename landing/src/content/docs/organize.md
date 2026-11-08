@@ -1,6 +1,6 @@
 ---
 title: Organize and find
-description: Folders, stars, search, the command palette, and the trash.
+description: Folders, stars, search, the command palette, export, and the trash.
 ---
 
 ## Folders and stars
@@ -11,7 +11,8 @@ were last edited. **All drawings** shows them all. Drawing and folder names
 can be up to 1,000 characters.
 
 Each drawing card has a **⋯** menu, like each row in the sidebar. Use it to
-**Star** or **Unstar**, **Rename**, **Move to Team**, or **Move to trash**.
+**Star** or **Unstar**, **Rename**, **Export .excalidraw**, **Move to Team**, or
+**Move to trash**.
 
 ## Search
 
@@ -23,6 +24,13 @@ drawing with a lot of text, search reads only the first 10,000 characters.
 
 Press <kbd>⌘K</kbd> or <kbd>Ctrl K</kbd> to find a drawing, go to a page, or
 run an action such as **New drawing**, **Rename**, or **Move to folder**.
+
+## Export
+
+To save a drawing to your computer without opening it, open its **⋯** menu on
+a card or in the sidebar and choose **Export .excalidraw**. The file includes
+the drawing's images. Open it in any Excalidraw, or
+[import](/docs/import/#from-files) it again.
 
 ## Trash
 

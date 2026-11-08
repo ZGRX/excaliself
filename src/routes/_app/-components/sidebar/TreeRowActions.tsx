@@ -1,4 +1,5 @@
 import {
+  Download,
   FilePlus,
   MoreHorizontal,
   Pencil,
@@ -31,6 +32,8 @@ type TreeRowActionsProps = {
   onToggleStar?: () => void
   // Private rows offer the move to Team (opens its confirm)
   onMoveToTeam?: () => void
+  // Drawing rows offer a download as an `.excalidraw` file
+  onExport?: () => void
 }
 
 // Callers must wrap the row in `group/tree-row` on whichever element should
@@ -45,6 +48,7 @@ export function TreeRowActions({
   starred,
   onToggleStar,
   onMoveToTeam,
+  onExport,
 }: TreeRowActionsProps) {
   return (
     <DropdownMenu>
@@ -98,6 +102,12 @@ export function TreeRowActions({
           <Pencil className="mr-2 h-4 w-4" />
           Rename
         </DropdownMenuItem>
+        {onExport && (
+          <DropdownMenuItem onClick={onExport}>
+            <Download className="mr-2 h-4 w-4" />
+            Export .excalidraw
+          </DropdownMenuItem>
+        )}
         {onMoveToTeam && (
           <>
             <DropdownMenuSeparator />
