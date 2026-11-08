@@ -1,5 +1,5 @@
-// The MCP server one member's AI client talks to: find, read, and create
-// drawings, propose changes to them, create folders, move drawings between
+// The MCP server one member's AI client talks to: find, read, create, and
+// export drawings, propose changes to them, create folders, move drawings between
 // folders, and move drawings and folders to the trash and back, under the
 // same Space rule as that member's browser. A proposed change waits for the
 // member's Apply in their own tab, which writes it like any edit (ADR 0003).
@@ -29,6 +29,13 @@ import { restoreDrawingUnit, restoreFolderUnit } from "@/features/trash/restore"
 import { purgeDeadline, TRASH_RETENTION_DAYS } from "@/features/trash/retention"
 import { trashDrawingUnit, trashFolderUnit } from "@/features/trash/trash"
 import packageJson from "../../../package.json"
+import { exportImage } from "./export/image"
+import {
+  loadImageFiles,
+  sceneBackgroundColor,
+  storedAppState,
+} from "./export/scene-data"
+import { MAX_SCENE_BYTES, toExcalidrawFile } from "./export/scene-file"
 import { buildScene } from "./scene/build"
 import { elementChange, planEdit } from "./scene/edit"
 import { parseMermaid } from "./scene/mermaid"
@@ -90,7 +97,7 @@ export function createMcpServer(db: Db, member: Member, origin: string) {
     {
       // Bounds the work one create_drawing call can ask for.
       maxToolInputElements: 20_000,
-      instructions: `Excaliself is a self-hosted Excalidraw. You act as ${userDisplayName(member)}. Every drawing and folder lives in a Space: "private" (only this member sees it) or "team" (every member sees it). You can find, read, and create drawings, create folders, move drawings between folders of one Space, and move drawings and folders to the trash or back. Members can restore trashed items from Trash for ${TRASH_RETENTION_DAYS} days. You can't delete anything for good.
+      instructions: `Excaliself is a self-hosted Excalidraw. You act as ${userDisplayName(member)}. Every drawing and folder lives in a Space: "private" (only this member sees it) or "team" (every member sees it). You can find, read, create, and export drawings (as images or .excalidraw files), create folders, move drawings between folders of one Space, and move drawings and folders to the trash or back. Members can restore trashed items from Trash for ${TRASH_RETENTION_DAYS} days. You can't delete anything for good.
 
 To change what is in an existing drawing, read it with read_drawing, then propose the change with edit_drawing. Nothing changes until the member clicks Apply on the drawing in Excaliself. Give them the drawing's link, and never say a change is done until a tool reports "applied".`,
     },
@@ -276,6 +283,168 @@ To change what is in an existing drawing, read it with read_drawing, then propos
           summarizeScene(elements),
         ].join("\n\n"),
       )
+    },
+  )
+
+  server.registerTool(
+    "export_drawing",
+    {
+      title: "Export drawing as image",
+      description: `Exports a drawing as an image file, as Excalidraw's "Export image" does, for documentation, a README, or slides. The file comes back attached: PNG as image content, SVG as an embedded resource. Clients that save attachments give you a file path to copy from.
+
+"png" (default) is a bitmap that every client can show. "svg" stays sharp at any size and embeds the drawing's fonts, so it looks the same anywhere, even in an <img>.`,
+      inputSchema: z.object({
+        id: z
+          .string()
+          .describe("A drawing id from list_drawings or search_drawings."),
+        format: z
+          .enum(["png", "svg"])
+          .default("png")
+          .describe('Default "png".'),
+        darkMode: z
+          .boolean()
+          .default(false)
+          .describe("Dark mode, as the canvas shows it. Default false."),
+        background: z
+          .boolean()
+          .default(true)
+          .describe(
+            "Fill the canvas color behind the drawing. false gives a transparent background. Default true.",
+          ),
+        padding: z
+          .number()
+          .int()
+          .min(0)
+          .max(200)
+          .default(10)
+          .describe("Space around the drawing, in pixels. Default 10."),
+        scale: z
+          .number()
+          .min(0.25)
+          .max(4)
+          .optional()
+          .describe(
+            "Size multiplier. Default 2 for PNG (sharp on high-density screens), 1 for SVG.",
+          ),
+      }),
+      annotations: { readOnlyHint: true },
+    },
+    async ({ id, format, darkMode, background, padding, scale }) => {
+      const drawing = await findDrawing(id)
+      // A live Room holds newer edits than the stored scene.
+      const elements =
+        (await roomElements(rooms, id)) ?? parseSceneElements(drawing.data)
+      if (!elements)
+        throw new Error("This drawing's data is damaged and can't be read.")
+      const image = await exportImage(
+        elements,
+        await loadImageFiles(db, id, elements),
+        {
+          format,
+          darkMode,
+          background,
+          backgroundColor: sceneBackgroundColor(drawing.data),
+          padding,
+          scale: scale ?? (format === "png" ? 2 : 1),
+        },
+      )
+      if (!image)
+        throw new Error("The drawing is empty: there is nothing to export.")
+      const data = image.data.toString("base64")
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify({
+              name: drawing.name,
+              format,
+              width: image.width,
+              height: image.height,
+              bytes: image.data.length,
+              url: drawingUrl(id),
+            }),
+          },
+          image.mimeType === "image/png"
+            ? { type: "image" as const, data, mimeType: image.mimeType }
+            : {
+                type: "resource" as const,
+                resource: {
+                  uri: `excaliself://export/${id}.svg`,
+                  mimeType: image.mimeType,
+                  blob: data,
+                },
+              },
+        ],
+      }
+    },
+  )
+
+  server.registerTool(
+    "export_scene",
+    {
+      title: "Export drawing as .excalidraw file",
+      description: `Exports a drawing as an .excalidraw file: the raw scene JSON that Excalidraw's "Save to file" writes, which Excalidraw and excalidraw.com open. The file comes back attached as an embedded resource; clients that save attachments give you a file path to copy from. To understand a drawing, use read_drawing instead.
+
+Images are left out by default: their elements stay, but show as missing images. With includeImages they are embedded as base64, which can be large. Files over ${MAX_SCENE_BYTES / 1024 / 1024} MB are refused.`,
+      inputSchema: z.object({
+        id: z
+          .string()
+          .describe("A drawing id from list_drawings or search_drawings."),
+        includeImages: z
+          .boolean()
+          .default(false)
+          .describe("Embed the drawing's images. Default false."),
+      }),
+      annotations: { readOnlyHint: true },
+    },
+    async ({ id, includeImages }) => {
+      const drawing = await findDrawing(id)
+      // A live Room holds newer edits than the stored scene.
+      const elements =
+        (await roomElements(rooms, id)) ?? parseSceneElements(drawing.data)
+      if (!elements)
+        throw new Error("This drawing's data is damaged and can't be read.")
+      const files = includeImages
+        ? await loadImageFiles(db, id, elements)
+        : new Map()
+      const file = Buffer.from(
+        toExcalidrawFile({
+          elements,
+          appState: storedAppState(drawing.data),
+          files,
+          source: origin,
+        }),
+      )
+      if (file.length > MAX_SCENE_BYTES) {
+        const size = `${(file.length / 1024 / 1024).toFixed(1)} MB`
+        throw new Error(
+          includeImages
+            ? `The file would be ${size}, over the ${MAX_SCENE_BYTES / 1024 / 1024} MB limit. Leave out images (includeImages: false).`
+            : `The file would be ${size}, over the ${MAX_SCENE_BYTES / 1024 / 1024} MB limit.`,
+        )
+      }
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify({
+              name: drawing.name,
+              elements: elements.filter((element) => !element.isDeleted).length,
+              images: files.size,
+              bytes: file.length,
+              url: drawingUrl(id),
+            }),
+          },
+          {
+            type: "resource" as const,
+            resource: {
+              uri: `excaliself://export/${id}.excalidraw`,
+              mimeType: "application/vnd.excalidraw+json",
+              blob: file.toString("base64"),
+            },
+          },
+        ],
+      }
     },
   )
 

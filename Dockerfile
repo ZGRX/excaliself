@@ -27,6 +27,10 @@ COPY --from=builder /app/drizzle ./drizzle
 # Preview mode loads PGlite and its wasm from node_modules at runtime
 # (src/db/preview.ts). It has no dependencies of its own.
 COPY --from=builder /app/node_modules/@electric-sql/pglite ./node_modules/@electric-sql/pglite
+# The MCP PNG export loads resvg and wawoff2 from node_modules at runtime
+# (src/features/mcp/export/png.ts). Neither needs its dependencies there.
+COPY --from=builder /app/node_modules/@resvg/resvg-wasm ./node_modules/@resvg/resvg-wasm
+COPY --from=builder /app/node_modules/wawoff2 ./node_modules/wawoff2
 
 USER node
 

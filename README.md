@@ -52,7 +52,7 @@ Data lives in memory and is gone when the container stops. For real use, see
 - **Drop files in.** Drag `.excalidraw` files (or `.png`/`.svg` exports with the scene) from your computer onto a folder in the sidebar.
 - **Trash** with restore. Deleted items are purged automatically after 30 days.
 - **Invite-only accounts.** The first visitor creates the admin account; everyone else joins by invite link.
-- **Connect your AI client.** Claude.ai, Claude Code, Claude Desktop, and other MCP clients can find, read, and create drawings, propose changes to them, and move them to the trash. A change waits on the canvas until you click Apply, and then everyone in the drawing sees it live. Clients sign in with OAuth or a personal access token. The instance needs no LLM API key.
+- **Connect your AI client.** Claude.ai, Claude Code, Claude Desktop, and other MCP clients can find, read, create, and export drawings, propose changes to them, and move them to the trash. A change waits on the canvas until you click Apply, and then everyone in the drawing sees it live. Clients sign in with OAuth or a personal access token. The instance needs no LLM API key.
 - **Single sign-on** with Google Workspace, Microsoft Entra ID, or any OIDC provider (Okta, Authentik, Keycloak). People from your email domains join on their first sign-in, with no invite.
 - **Admin tools** under Settings: manage members and roles, create password-reset links, and see instance stats.
 - **Light and dark themes**, with an optional separate theme for the canvas.
@@ -180,6 +180,9 @@ The tools:
   their space and folder.
 - `read_drawing` describes a drawing: its shapes, text, and what the arrows
   connect. It does not send the raw Excalidraw JSON.
+- `export_drawing` exports a drawing as a PNG or SVG image, for example for
+  your documentation. An SVG contains the drawing's fonts. `export_scene`
+  exports it as an `.excalidraw` file.
 - `create_drawing` makes a new drawing in your private space or in Team,
   optionally in a folder, from simple shapes and arrows or a Mermaid flowchart.
 - `edit_drawing` proposes a change to a drawing: shapes, text, and arrows to

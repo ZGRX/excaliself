@@ -49,7 +49,7 @@ docker run --rm -p 127.0.0.1:3000:3000 -e PREVIEW_MODE=true ghcr.io/maciekzygmun
 - **拖放文件导入**：把电脑上的 `.excalidraw` 文件，或内嵌绘图数据的 `.png` / `.svg` 导出文件，拖到侧边栏中的文件夹上。
 - **回收站**：删除的内容可从回收站恢复，满 30 天后自动永久删除。
 - **邀请制账号**：第一位访问者创建管理员账号，其他人通过邀请链接加入。
-- **连接 AI 客户端**：Claude.ai、Claude Code、Claude Desktop 等 MCP 客户端可以查找、读取和创建绘图，提议修改绘图，也可以把绘图移入回收站。修改提议会显示在画布上，只有你点击 Apply（应用）后才会生效，并实时同步给绘图中的所有人。客户端通过 OAuth 授权或个人访问令牌接入，Excaliself 无需配置大语言模型（LLM）的 API 密钥。
+- **连接 AI 客户端**：Claude.ai、Claude Code、Claude Desktop 等 MCP 客户端可以查找、读取、创建和导出绘图，提议修改绘图，也可以把绘图移入回收站。修改提议会显示在画布上，只有你点击 Apply（应用）后才会生效，并实时同步给绘图中的所有人。客户端通过 OAuth 授权或个人访问令牌接入，Excaliself 无需配置大语言模型（LLM）的 API 密钥。
 - **单点登录**：支持 Google Workspace、Microsoft Entra ID 和其他支持 OIDC 的身份服务（如 Okta、Authentik、Keycloak）。使用指定邮箱域名的用户可在首次登录时直接加入，无需邀请。
 - **管理员工具**：在“设置”中管理成员和角色、创建密码重置链接，并查看实例统计信息。
 - **浅色与深色主题**：还可以为画布单独设置主题。
@@ -144,6 +144,7 @@ claude mcp add --transport http excaliself https://draw.example.com/api/mcp \
 
 - `list_drawings`、`search_drawings` 和 `list_folders`：查找绘图与文件夹，并显示它们所属的空间和文件夹。
 - `read_drawing`：描述绘图中的形状、文字及箭头连接关系；不会返回原始 Excalidraw JSON。
+- `export_drawing`：把绘图导出为 PNG 或 SVG 图片，例如用于文档。SVG 内嵌绘图所用的字体。`export_scene` 把绘图导出为 `.excalidraw` 文件。
 - `create_drawing`：使用简单的形状和箭头，或 Mermaid 流程图，在私人空间或团队空间中创建绘图，也可指定存入某个文件夹。
 - `edit_drawing`：提议修改绘图，可以添加、修改或删除形状、文字和箭头。只有你在绘图上点击 **Apply**（应用）后，修改才会生效；`get_drawing_edit` 告诉客户端你是否已应用。
 - `create_folder`：在私人空间或团队空间创建文件夹，也可以放在另一个文件夹内。

@@ -107,6 +107,22 @@ const config = defineConfig({
       features: { websocket: true },
       rolldownConfig: {
         plugins: [wsFrameCap()],
+        output: {
+          codeSplitting: {
+            groups: [
+              {
+                // The MCP image export draws with libraries Excalidraw also
+                // bundles. Left to Nitro's groups, they join Excalidraw's
+                // chunk, which then loads at startup and every request fails
+                // with "window is not defined". A group of their own, taken
+                // first, keeps Excalidraw off the server.
+                name: "_libs/excalidraw-drawing",
+                test: /[\\/]node_modules[\\/](roughjs|perfect-freehand|points-on-curve)[\\/]/,
+                priority: 1,
+              },
+            ],
+          },
+        },
         checks: {
           // The server bundle inlines client libraries; their "use client"
           // directives mean nothing there and Rolldown warns on each one.

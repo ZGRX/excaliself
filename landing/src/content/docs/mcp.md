@@ -1,6 +1,6 @@
 ---
 title: Connect an AI client
-description: Let Claude.ai, Claude Code, Claude Desktop, and other MCP clients find, read, create, change, and trash drawings, with every change applied only by you.
+description: Let Claude.ai, Claude Code, Claude Desktop, and other MCP clients find, read, create, change, export, and trash drawings, with every change applied only by you.
 ---
 
 Excaliself has an [MCP](https://modelcontextprotocol.io) server at `/api/mcp`.
@@ -124,6 +124,9 @@ client still works, but you can't open the app.
   their space and folder.
 - `read_drawing` describes a drawing: its shapes, text, and what the arrows
   connect. It does not send the raw Excalidraw JSON.
+- `export_drawing` exports a drawing as a PNG or SVG image, for example to put
+  it in your documentation. `export_scene` exports it as an `.excalidraw`
+  file. See [Export a drawing](#export-a-drawing).
 - `create_drawing` makes a new drawing in your private space or in Team,
   optionally in a folder, from simple shapes and arrows or a Mermaid flowchart.
   Mermaid `style` lines color the nodes (`fill` and `stroke`, as hex or named colors).
@@ -164,6 +167,40 @@ discarded it.
 - A proposal expires after 30 minutes. A new proposal for the same drawing
   replaces the old one. Proposals are kept in memory, so a restart of the
   instance drops them, and nothing changes.
+
+## Export a drawing
+
+Ask your AI client for an image, for example "Put the System overview drawing
+in the README as an SVG". The image looks like Excalidraw's own
+**Export image**:
+
+- **PNG** (the default) is a bitmap that every client can show. It has twice
+  the drawing's size by default, so it stays sharp on high-density screens.
+  A PNG can be at most 4096 × 4096 pixels.
+- **SVG** stays sharp at any size. It contains the drawing's fonts, so its text
+  looks the same everywhere, also in an `<img>` tag. Because of the fonts, a
+  small drawing is still about 40 KB.
+
+A PNG has no emoji font, so emoji in its text do not show. An SVG leaves
+emoji to the viewer's system font.
+
+The client can also ask for dark mode, a transparent background, more or less
+space around the drawing, and a different size.
+
+The image comes back to the client as an attachment. Claude Code saves it to a
+file and copies it where you want it.
+
+### As an `.excalidraw` file
+
+Ask for the drawing as a file, for example "Save the System overview drawing
+as an .excalidraw file in docs/". The file is the same as what Excalidraw's
+**Save to file** writes, so Excalidraw, excalidraw.com, and Excaliself's
+[import](/docs/import/) open it. If someone has the drawing open, the file
+has their latest changes.
+
+Images are left out unless the client asks for them: their elements stay in
+the file, but show as missing images. With images, the file holds them as
+base64 text and can get large. A file can be at most 10 MB.
 
 ## Access
 
