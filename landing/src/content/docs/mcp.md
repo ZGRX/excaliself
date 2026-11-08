@@ -1,6 +1,6 @@
 ---
 title: Connect an AI client
-description: Let Claude.ai, Claude Code, Claude Desktop, and other MCP clients find, read, create, change, export, and trash drawings, with every change applied only by you.
+description: Let Claude.ai, Claude Code, Claude Desktop, and other MCP clients find, read, create, import, change, export, and trash drawings, with every change applied only by you.
 ---
 
 Excaliself has an [MCP](https://modelcontextprotocol.io) server at `/api/mcp`.
@@ -130,6 +130,12 @@ client still works, but you can't open the app.
 - `create_drawing` makes a new drawing in your private space or in Team,
   optionally in a folder, from simple shapes and arrows or a Mermaid flowchart.
   Mermaid `style` lines color the nodes (`fill` and `stroke`, as hex or named colors).
+- `import_scene` makes a new drawing from a `.excalidraw` file, as
+  Excalidraw's **Save to file** writes it, with its images. It takes an
+  optional name, space, and folder, like `create_drawing`. The whole call can
+  be up to 4 MB. The server refuses a scene that Excalidraw can't open, and
+  tells the client why. Images that the file does not carry show as
+  placeholders.
 - `edit_drawing` proposes a change to an existing drawing: shapes, text, and
   arrows to add, change, or remove. Nothing changes until you click **Apply**.
   See [Change a drawing](#change-a-drawing). `get_drawing_edit` tells the

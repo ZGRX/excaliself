@@ -139,9 +139,9 @@ function parseSceneBounds(value: unknown): SceneBounds | null {
 }
 
 /** Excalidraw elements nest a few levels; Node 22's JSON.stringify overflows near 10k. */
-const MAX_ELEMENT_DEPTH = 64
+export const MAX_ELEMENT_DEPTH = 64
 
-function nestedDeeperThan(value: unknown, depth: number): boolean {
+export function nestedDeeperThan(value: unknown, depth: number): boolean {
   if (typeof value !== "object" || value === null) return false
   if (depth === 0) return true
   return Object.values(value).some((child) =>

@@ -449,7 +449,9 @@ const BASE_62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
  * the server bundle would load it from Excalidraw's chunk, and with it
  * Excalidraw, which needs a browser.
  */
-export function withIndices(elements: BuiltElement[]): BuiltElement[] {
+export function withIndices<T extends object>(
+  elements: T[],
+): (T & { index: string })[] {
   return elements.map((element, position) => {
     const digit = (place: number) =>
       BASE_62[Math.floor(position / 62 ** place) % 62]

@@ -135,7 +135,7 @@ export async function importDrawing(
     lastModified: number
     content: SceneContent
   },
-): Promise<{ skippedImages: number }> {
+): Promise<{ id: string; space: Space; skippedImages: number }> {
   const prepared = prepareScene(input.content)
   return db.transaction(async (tx) => {
     await lockFolderTree(tx, "place")
@@ -145,7 +145,7 @@ export async function importDrawing(
       : input.space
     const now = new Date()
     const importedAt = new Date(Math.min(input.lastModified, now.getTime()))
-    await insertPreparedDrawing(tx, prepared, {
+    const id = await insertPreparedDrawing(tx, prepared, {
       name: input.name,
       folderId: input.folderId,
       space,
@@ -153,6 +153,6 @@ export async function importDrawing(
       createdAt: importedAt,
       updatedAt: importedAt,
     })
-    return { skippedImages: prepared.skippedImages }
+    return { id, space, skippedImages: prepared.skippedImages }
   })
 }

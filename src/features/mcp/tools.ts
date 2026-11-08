@@ -11,12 +11,18 @@ import { z } from "zod"
 import type { Db } from "@/db"
 import { drawings, type Space, spaces } from "@/db/schema"
 import { userDisplayName } from "@/features/account/display-name"
+import { MAX_DRAWING_IMAGE_BYTES } from "@/features/collab/room-files"
 import { endTrashedRooms, rooms } from "@/features/collab/room-registry"
-import { roomElements } from "@/features/collab/room-session"
+import {
+  MAX_ROOM_ELEMENTS,
+  MAX_ROOM_SCENE_BYTES,
+  roomElements,
+} from "@/features/collab/room-session"
 import { parseStoredScene } from "@/features/collab/scene-store"
 import { type DrawingEdit, drawingEdits } from "@/features/drawing-edits/store"
 import { insertDrawing } from "@/features/drawings/create"
 import { listDrawings } from "@/features/drawings/list"
+import { importDrawing } from "@/features/drawings/scene-import"
 import { matchDrawing, parseSceneElements } from "@/features/drawings/search"
 import { updateDrawingFields } from "@/features/drawings/update"
 import { insertFolder } from "@/features/folders/create"
@@ -38,6 +44,7 @@ import {
 import { MAX_SCENE_BYTES, toExcalidrawFile } from "./export/scene-file"
 import { buildScene } from "./scene/build"
 import { elementChange, planEdit } from "./scene/edit"
+import { parseImportedScene } from "./scene/import"
 import { parseMermaid } from "./scene/mermaid"
 import {
   directions,
@@ -97,7 +104,7 @@ export function createMcpServer(db: Db, member: Member, origin: string) {
     {
       // Bounds the work one create_drawing call can ask for.
       maxToolInputElements: 20_000,
-      instructions: `Excaliself is a self-hosted Excalidraw. You act as ${userDisplayName(member)}. Every drawing and folder lives in a Space: "private" (only this member sees it) or "team" (every member sees it). You can find, read, create, and export drawings (as images or .excalidraw files), create folders, move drawings between folders of one Space, and move drawings and folders to the trash or back. Members can restore trashed items from Trash for ${TRASH_RETENTION_DAYS} days. You can't delete anything for good.
+      instructions: `Excaliself is a self-hosted Excalidraw. You act as ${userDisplayName(member)}. Every drawing and folder lives in a Space: "private" (only this member sees it) or "team" (every member sees it). You can find, read, create, and export drawings (as images or .excalidraw files), import .excalidraw files as new drawings, create folders, move drawings between folders of one Space, and move drawings and folders to the trash or back. Members can restore trashed items from Trash for ${TRASH_RETENTION_DAYS} days. You can't delete anything for good.
 
 To change what is in an existing drawing, read it with read_drawing, then propose the change with edit_drawing. Nothing changes until the member clicks Apply on the drawing in Excaliself. Give them the drawing's link, and never say a change is done until a tool reports "applied".`,
     },
@@ -514,6 +521,79 @@ Colors: Excalidraw's palette reads best, e.g. backgrounds "#a5d8ff" (blue), "#b2
         space: created.space,
         folder: folder ?? null,
         elements: elements.length,
+        url: drawingUrl(created.id),
+      })
+    },
+  )
+
+  server.registerTool(
+    "import_scene",
+    {
+      title: "Import scene",
+      description: `Creates a NEW drawing from an Excalidraw scene: the JSON of a .excalidraw file, as Excalidraw's "Save to file" writes it, with images inline in "files". Returns its link. To draw from a description instead, use create_drawing.
+
+Up to ${MAX_ROOM_ELEMENTS.toLocaleString("en")} elements and ${MAX_ROOM_SCENE_BYTES / 1024 / 1024} MB of element JSON; images up to ${MAX_DRAWING_IMAGE_BYTES / 1024 / 1024} MB in all. The whole call must stay under 4 MB; send a large scene as JSON text, not an object. Images with no entry in "files" open as placeholders.`,
+      inputSchema: z.object({
+        // Some clients send JSON-looking text as an object. The meta makes
+        // the schema say `additionalProperties: true`, not a bare `{}`.
+        scene: z
+          .union([
+            z.string().min(1),
+            z.looseObject({}).meta({ additionalProperties: true }),
+          ])
+          .describe(
+            'The .excalidraw file: its JSON text, or that JSON as an object, with "elements", and "files" for images.',
+          ),
+        name: z
+          .string()
+          .trim()
+          .min(1)
+          .max(200)
+          .optional()
+          .describe('Default "Untitled".'),
+        space: space
+          .default("private")
+          .describe(
+            'Default "private". Ignored with folderId: a drawing takes its folder\'s Space.',
+          ),
+        folderId: z
+          .string()
+          .optional()
+          .describe("Put it in this folder (see list_folders)."),
+      }),
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: false,
+      },
+    },
+    async (input) => {
+      const { content, missingImages } = parseImportedScene(input.scene)
+      const name = input.name ?? "Untitled"
+      const created = await importDrawing(db, member.id, {
+        name,
+        folderId: input.folderId ?? null,
+        space: input.space,
+        lastModified: Date.now(),
+        content,
+      })
+      listUpdates.notify()
+      const folder = input.folderId
+        ? folderPaths(await listFolders(db, member.id)).get(input.folderId)
+        : undefined
+      return json({
+        id: created.id,
+        name,
+        space: created.space,
+        folder: folder ?? null,
+        elements: content.elements.length,
+        images: Object.keys(content.files).length,
+        ...(missingImages > 0
+          ? {
+              missingImages,
+              note: `${missingImages} image(s) had no data in "files" and open as placeholders.`,
+            }
+          : {}),
         url: drawingUrl(created.id),
       })
     },
