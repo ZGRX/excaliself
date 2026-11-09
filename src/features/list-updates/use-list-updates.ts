@@ -1,6 +1,6 @@
 // Client half of the lists socket: refetches the drawing, folder, and trash
-// lists, the team library, or proposed drawing edits, when the server says
-// they changed. Reconnects forever.
+// lists, the team library, proposed drawing edits, or comments, when the
+// server says they changed. Reconnects forever.
 
 import { type QueryClient, useQueryClient } from "@tanstack/react-query"
 import { useEffect } from "react"
@@ -9,6 +9,7 @@ import { foldersQueryOptions } from "@/features/folders/queries"
 import { createReconnectBackoff } from "@/lib/socket/backoff"
 import { createHeartbeat } from "@/lib/socket/heartbeat"
 import {
+  COMMENTS_CHANGED,
   EDITS_CHANGED,
   LIBRARY_CHANGED,
   LISTS_CHANGED,
@@ -29,6 +30,8 @@ const LIST_KEYS = [
 const LIBRARY_KEY = ["library"]
 // Same: matches drawingEditQueryOptions().
 const EDITS_KEY = ["drawing-edits"]
+// Same: matches commentThreadsQueryOptions().
+const COMMENTS_KEY = ["comments"]
 
 function invalidateLists(queryClient: QueryClient) {
   for (const queryKey of LIST_KEYS)
@@ -63,6 +66,8 @@ export function useListUpdates() {
       void queryClient.invalidateQueries({ queryKey: LIBRARY_KEY })
     const refetchEdits = () =>
       void queryClient.invalidateQueries({ queryKey: EDITS_KEY })
+    const refetchComments = () =>
+      void queryClient.invalidateQueries({ queryKey: COMMENTS_KEY })
 
     const connect = () => {
       const current = new WebSocket(listUpdatesUrl(window.location))
@@ -80,6 +85,7 @@ export function useListUpdates() {
         refetchLists()
         refetchLibrary()
         refetchEdits()
+        refetchComments()
       })
 
       current.addEventListener("message", (event) => {
@@ -87,6 +93,7 @@ export function useListUpdates() {
         else if (event.data === LISTS_CHANGED) refetchLists()
         else if (event.data === LIBRARY_CHANGED) refetchLibrary()
         else if (event.data === EDITS_CHANGED) refetchEdits()
+        else if (event.data === COMMENTS_CHANGED) refetchComments()
       })
 
       current.addEventListener("close", (event) => {

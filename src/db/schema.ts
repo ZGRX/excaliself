@@ -4,7 +4,9 @@ import {
   boolean,
   check,
   customType,
+  doublePrecision,
   foreignKey,
+  index,
   integer,
   jsonb,
   pgTable,
@@ -353,3 +355,82 @@ export const libraryItems = pgTable("library_items", {
   item: jsonb("item").$type<LibraryItem>().notNull(),
   seq: integer("seq").generatedAlwaysAsIdentity().notNull(),
 })
+
+// A comment thread pinned to one spot on a drawing. Never part of the scene.
+// The pin sits at (x, y), or, with elementId set, at (offsetX, offsetY) as a
+// fraction of that element's box; (x, y) is then where it was made.
+export const commentThreads = pgTable(
+  "comment_threads",
+  {
+    id: text("id").primaryKey(),
+    drawingId: text("drawingId")
+      .notNull()
+      .references(() => drawings.id, { onDelete: "cascade" }),
+    createdBy: text("createdBy").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    x: doublePrecision("x").notNull(),
+    y: doublePrecision("y").notNull(),
+    elementId: text("elementId"),
+    offsetX: doublePrecision("offsetX"),
+    offsetY: doublePrecision("offsetY"),
+    resolvedAt: timestamp("resolvedAt"),
+    resolvedBy: text("resolvedBy").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("createdAt")
+      .notNull()
+      .$defaultFn(() => new Date()),
+    lastActivityAt: timestamp("lastActivityAt")
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => ({
+    byDrawing: index("comment_threads_drawing").on(table.drawingId),
+    elementAnchor: check(
+      "comment_threads_element_anchor",
+      sql`(${table.elementId} is null) = (${table.offsetX} is null) and (${table.elementId} is null) = (${table.offsetY} is null)`,
+    ),
+  }),
+)
+
+// One message in a thread. A thread's first comment opens it.
+export const comments = pgTable(
+  "comments",
+  {
+    id: text("id").primaryKey(),
+    threadId: text("threadId")
+      .notNull()
+      .references(() => commentThreads.id, { onDelete: "cascade" }),
+    authorId: text("authorId").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    // The AI client's name when written over MCP.
+    via: text("via"),
+    body: text("body").notNull(),
+    createdAt: timestamp("createdAt")
+      .notNull()
+      .$defaultFn(() => new Date()),
+    editedAt: timestamp("editedAt"),
+  },
+  (table) => ({
+    byThread: index("comments_thread").on(table.threadId, table.createdAt),
+  }),
+)
+
+// When a member last opened a thread, for its unread dot.
+export const commentReads = pgTable(
+  "comment_reads",
+  {
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    threadId: text("threadId")
+      .notNull()
+      .references(() => commentThreads.id, { onDelete: "cascade" }),
+    readAt: timestamp("readAt").notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.userId, table.threadId] }),
+  }),
+)

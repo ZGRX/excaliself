@@ -5,10 +5,13 @@ export const LISTS_CHANGED = "changed"
 export const LIBRARY_CHANGED = "library"
 /** A member's proposed drawing edits changed. */
 export const EDITS_CHANGED = "edits"
+/** A drawing's comment threads changed. Open drawings refetch theirs. */
+export const COMMENTS_CHANGED = "comments"
 export type ListUpdate =
   | typeof LISTS_CHANGED
   | typeof LIBRARY_CHANGED
   | typeof EDITS_CHANGED
+  | typeof COMMENTS_CHANGED
 export const PING = "ping"
 export const PONG = "pong"
 

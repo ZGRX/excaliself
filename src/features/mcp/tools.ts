@@ -1,8 +1,10 @@
 // The MCP server one member's AI client talks to: find, read, create, and
 // export drawings, propose changes to them, create folders, move drawings between
-// folders, and move drawings and folders to the trash and back, under the
-// same Space rule as that member's browser. A proposed change waits for the
-// member's Apply in their own tab, which writes it like any edit (ADR 0003).
+// folders, move drawings and folders to the trash and back, and read and
+// write comments, under the same Space rule as that member's browser. A
+// proposed change waits for the member's Apply in their own tab, which writes
+// it like any edit (ADR 0003). Comments are not scene data, so they write
+// directly, marked with the client's name.
 // Delete forever is left out: only a member empties the trash.
 
 import { McpServer } from "@modelcontextprotocol/server"
@@ -19,6 +21,13 @@ import {
   roomElements,
 } from "@/features/collab/room-session"
 import { parseStoredScene } from "@/features/collab/scene-store"
+import {
+  addReply,
+  countOpenThreads,
+  createThread,
+  listThreads,
+  setResolved,
+} from "@/features/comments/store"
 import { type DrawingEdit, drawingEdits } from "@/features/drawing-edits/store"
 import { insertDrawing } from "@/features/drawings/create"
 import { listDrawings } from "@/features/drawings/list"
@@ -29,12 +38,16 @@ import { insertFolder } from "@/features/folders/create"
 import { listFolders } from "@/features/folders/list"
 import { folderPaths } from "@/features/folders/subtree"
 import { listUpdates } from "@/features/list-updates/hub"
-import { EDITS_CHANGED } from "@/features/list-updates/protocol"
+import {
+  COMMENTS_CHANGED,
+  EDITS_CHANGED,
+} from "@/features/list-updates/protocol"
 import { accessibleTo } from "@/features/spaces/access"
 import { restoreDrawingUnit, restoreFolderUnit } from "@/features/trash/restore"
 import { purgeDeadline, TRASH_RETENTION_DAYS } from "@/features/trash/retention"
 import { trashDrawingUnit, trashFolderUnit } from "@/features/trash/trash"
 import packageJson from "../../../package.json"
+import { anchorForTool, describeAnchor } from "./comments"
 import { exportImage } from "./export/image"
 import {
   loadImageFiles,
@@ -104,9 +117,11 @@ export function createMcpServer(db: Db, member: Member, origin: string) {
     {
       // Bounds the work one create_drawing call can ask for.
       maxToolInputElements: 20_000,
-      instructions: `Excaliself is a self-hosted Excalidraw. You act as ${userDisplayName(member)}. Every drawing and folder lives in a Space: "private" (only this member sees it) or "team" (every member sees it). You can find, read, create, and export drawings (as images or .excalidraw files), import .excalidraw files as new drawings, create folders, move drawings between folders of one Space, and move drawings and folders to the trash or back. Members can restore trashed items from Trash for ${TRASH_RETENTION_DAYS} days. You can't delete anything for good.
+      instructions: `Excaliself is a self-hosted Excalidraw. You act as ${userDisplayName(member)}. Every drawing and folder lives in a Space: "private" (only this member sees it) or "team" (every member sees it). You can find, read, create, and export drawings (as images or .excalidraw files), import .excalidraw files as new drawings, create folders, move drawings between folders of one Space, move drawings and folders to the trash or back, and read, start, reply to, and resolve comment threads pinned to a drawing. Members can restore trashed items from Trash for ${TRASH_RETENTION_DAYS} days. You can't delete anything for good.
 
-To change what is in an existing drawing, read it with read_drawing, then propose the change with edit_drawing. Nothing changes until the member clicks Apply on the drawing in Excaliself. Give them the drawing's link, and never say a change is done until a tool reports "applied".`,
+To change what is in an existing drawing, read it with read_drawing, then propose the change with edit_drawing. Nothing changes until the member clicks Apply on the drawing in Excaliself. Give them the drawing's link, and never say a change is done until a tool reports "applied".
+
+Comments you write show as written by this member via ${member.client}, and appear at once.`,
     },
   )
   const drawingUrl = (id: string) => `${origin}/draw/${id}`
@@ -155,6 +170,14 @@ To change what is in an existing drawing, read it with read_drawing, then propos
       )
     }
     return drawing
+  }
+
+  /** The scene now: a live Room holds newer edits than the stored scene. */
+  const currentElements = async (id: string, data: string) => {
+    const elements = (await roomElements(rooms, id)) ?? parseSceneElements(data)
+    if (!elements)
+      throw new Error("This drawing's data is damaged and can't be read.")
+    return elements as Record<string, unknown>[]
   }
 
   const toRow = (drawing: ListedDrawing, paths: Map<string, string>) => ({
@@ -271,11 +294,8 @@ To change what is in an existing drawing, read it with read_drawing, then propos
     },
     async ({ id }) => {
       const drawing = await findDrawing(id)
-      // A live Room holds newer edits than the stored scene.
-      const elements =
-        (await roomElements(rooms, id)) ?? parseSceneElements(drawing.data)
-      if (!elements)
-        throw new Error("This drawing's data is damaged and can't be read.")
+      const elements = await currentElements(id, drawing.data)
+      const openThreads = await countOpenThreads(db, id)
 
       const folder = drawing.folderId
         ? folderPaths(await listFolders(db, member.id)).get(drawing.folderId)
@@ -288,6 +308,11 @@ To change what is in an existing drawing, read it with read_drawing, then propos
         [
           `${JSON.stringify(drawing.name)} (${where}), last edited ${drawing.updatedAt.toISOString()}. ${drawingUrl(id)}`,
           summarizeScene(elements),
+          ...(openThreads > 0
+            ? [
+                `${openThreads} open comment ${openThreads === 1 ? "thread" : "threads"} (see list_comments).`,
+              ]
+            : []),
         ].join("\n\n"),
       )
     },
@@ -885,6 +910,135 @@ Read the drawing with read_drawing first, and refer to its elements by the [id â
       const { originalParentGone } = await restoreFolderUnit(db, member.id, id)
       listUpdates.notify()
       return json({ id, originalParentGone })
+    },
+  )
+
+  const commentBodyInput = z
+    .string()
+    .describe("Plain text, up to 2000 characters. No Markdown.")
+
+  server.registerTool(
+    "list_comments",
+    {
+      title: "List comments",
+      description:
+        "Lists the comment threads pinned to a drawing, oldest first, with their comments. Each thread is pinned to an element (with its label, or deleted: true once the element is gone) or to a canvas point.",
+      inputSchema: z.object({
+        id: z
+          .string()
+          .describe("A drawing id from list_drawings or search_drawings."),
+        includeResolved: z
+          .boolean()
+          .default(false)
+          .describe("Also list resolved threads. Default false."),
+      }),
+      annotations: { readOnlyHint: true },
+    },
+    async ({ id, includeResolved }) => {
+      const drawing = await findDrawing(id)
+      const elements = await currentElements(id, drawing.data)
+      const threads = (await listThreads(db, member.id, id)).filter(
+        (thread) => includeResolved || thread.resolvedAt === null,
+      )
+      return json({
+        total: threads.length,
+        threads: threads.map((thread) => ({
+          threadId: thread.id,
+          status: thread.resolvedAt ? "resolved" : "open",
+          ...(thread.resolvedAt && {
+            resolvedBy: thread.resolvedBy?.name ?? "Former member",
+          }),
+          pinnedTo: describeAnchor(thread, elements),
+          comments: thread.comments.map((comment) => ({
+            author: comment.author?.name ?? "Former member",
+            ...(comment.via && { via: comment.via }),
+            body: comment.body,
+            at: comment.createdAt.toISOString(),
+            ...(comment.editedAt && { edited: true }),
+          })),
+        })),
+        url: drawingUrl(id),
+      })
+    },
+  )
+
+  server.registerTool(
+    "add_comment",
+    {
+      title: "Add comment",
+      description:
+        "Starts a comment thread on a drawing, pinned to an element (see read_drawing for ids) or, without one, to the top-left of the drawing. Every member who can see the drawing sees it at once.",
+      inputSchema: z.object({
+        id: z
+          .string()
+          .describe("A drawing id from list_drawings or search_drawings."),
+        body: commentBodyInput,
+        elementId: z
+          .string()
+          .optional()
+          .describe("Pin the thread to this element."),
+      }),
+      annotations: { readOnlyHint: false, destructiveHint: false },
+    },
+    async ({ id, body, elementId }) => {
+      const drawing = await findDrawing(id)
+      const anchor = anchorForTool(
+        await currentElements(id, drawing.data),
+        elementId,
+      )
+      const threadId = await createThread(db, member.id, {
+        drawingId: id,
+        anchor,
+        body,
+        via: member.client,
+      })
+      listUpdates.notify(COMMENTS_CHANGED)
+      return json({ threadId, url: drawingUrl(id) })
+    },
+  )
+
+  server.registerTool(
+    "reply_to_comment",
+    {
+      title: "Reply to comment",
+      description:
+        "Adds a comment to an open thread. A resolved thread must be reopened first (resolve_comment with resolved: false).",
+      inputSchema: z.object({
+        threadId: z.string().describe("A threadId from list_comments."),
+        body: commentBodyInput,
+      }),
+      annotations: { readOnlyHint: false, destructiveHint: false },
+    },
+    async ({ threadId, body }) => {
+      await addReply(db, member.id, { threadId, body, via: member.client })
+      listUpdates.notify(COMMENTS_CHANGED)
+      return json({ threadId })
+    },
+  )
+
+  server.registerTool(
+    "resolve_comment",
+    {
+      title: "Resolve comment",
+      description:
+        "Resolves a comment thread when what it asks for is done, or reopens it. Resolved threads are hidden on the canvas by default.",
+      inputSchema: z.object({
+        threadId: z.string().describe("A threadId from list_comments."),
+        resolved: z
+          .boolean()
+          .default(true)
+          .describe("false reopens the thread. Default true."),
+      }),
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+      },
+    },
+    async ({ threadId, resolved }) => {
+      await setResolved(db, member.id, threadId, resolved)
+      listUpdates.notify(COMMENTS_CHANGED)
+      return json({ threadId, status: resolved ? "resolved" : "open" })
     },
   )
 

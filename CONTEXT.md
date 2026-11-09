@@ -75,10 +75,25 @@ An image on a Drawing's canvas, stored as bytes under a content-addressed file i
 The instance's one set of reusable shapes and icons, shown in the editor's Library panel in every Drawing, Private or Team. Every member sees and edits the same items, stored on the server; a member's add or remove reaches teammates' open editors live. Guests on a Share link neither see nor change it. Not tied to the Team Space despite the name: it is the team's, not a Space's.
 
 ### Access token
-A secret a member makes under Settings so their own AI client can use the instance over MCP (`/api/mcp`). It acts as that member under the same Space rule: it can find, read, and create Drawings, create folders, and move Drawings between folders of one Space. It never writes a Drawing's scene: it makes a Proposal, which only the member's Apply writes. It never deletes anything for good. Shown once, when made. Revoking it, or deleting its member, ends it at once. Not a Share link: it opens no Room and has no Audience.
+A secret a member makes under Settings so their own AI client can use the instance over MCP (`/api/mcp`). It acts as that member under the same Space rule: it can find, read, and create Drawings, create folders, and move Drawings between folders of one Space. It never writes a Drawing's scene: it makes a Proposal, which only the member's Apply writes. It can read and write Comments directly, marked with its name. It never deletes anything for good. Shown once, when made. Revoking it, or deleting its member, ends it at once. Not a Share link: it opens no Room and has no Audience.
 
 ### Connected app
 An AI client, such as a Claude.ai connector, that a member let in through OAuth instead of an Access token: the client asks, the member signs in and clicks Allow. Same access and same limits as an Access token. Listed beside the tokens in Settings, where the member disconnects it; disconnecting, or deleting its member, ends it at once.
 
 ### Proposal
 A change to a Drawing's scene that an AI client asks for (Access token or Connected app): elements to add, change, or remove. It changes nothing by itself. Only the member the client acts as sees it, as a card on the Drawing in each of their tabs, and they Apply or Discard it. Apply puts it on that tab's canvas as the member's own edit, so the Drawing's one writer (its Room, or autosave) carries it and undo takes it back (ADR 0003). It goes stale if an element it changes moved on before the Apply, and expires after 30 minutes. A new Proposal for the same Drawing replaces the member's open one. Held in memory, so a restart drops it.
+
+### Comment thread
+A conversation pinned to one Anchor on one Drawing: open or resolved. Exists while it holds at least one Comment. Lives beside the scene, never in it, so it never touches the Room, autosave, undo, exports, or the `.excalidraw` file. Whoever can see the Drawing can read, start, reply to, resolve, and reopen its threads; guests on a Share link see none.
+
+### Comment
+One plain-text message in a Comment thread, by one member (or their AI client, shown as "via" its name). The first one opens the thread. Only its author edits or deletes it.
+
+### Anchor
+Where a Comment thread's Pin sits: a canvas point, or an element plus a spot on it, as a fraction of its box. An element Anchor follows the element as it moves, resizes, and rotates.
+
+### Pin
+A Comment thread's marker over the canvas. DOM, not a scene element. Resolved threads' Pins are hidden unless "Show resolved" is on.
+
+### Detached
+A Comment thread whose Anchor element was deleted. Its Pin stays where the element was, and re-attaches if the element comes back by undo.

@@ -6,7 +6,12 @@ import type {
   ExcalidrawImperativeAPI,
 } from "@excalidraw/excalidraw/types"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { PanelLeftIcon, Share2Icon, Users } from "lucide-react"
+import {
+  MessageSquareIcon,
+  PanelLeftIcon,
+  Share2Icon,
+  Users,
+} from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 import {
@@ -49,6 +54,8 @@ import { drawingShareQueryOptions } from "@/features/shares/queries"
 import { useAutoSave } from "@/hooks/use-auto-save"
 import { usePreloadTextFont } from "@/hooks/use-preload-text-font"
 import { useCanvasTheme } from "@/hooks/use-theme"
+import { CommentsButton } from "./comments/CommentsButton"
+import { CommentsLayer } from "./comments/CommentsLayer"
 import { DrawingEditCard } from "./DrawingEditCard"
 import { useMoveToTeamDialog } from "./MoveToTeamDialog"
 import { SaveStatusPill } from "./SaveStatusPill"
@@ -134,6 +141,8 @@ export function DrawingCanvas({
   const saveScenePayload = useSaveScenePayload(drawingId, handleImagesOverCap)
 
   const [shareOpen, setShareOpen] = useState(false)
+  const [commentsOpen, setCommentsOpen] = useState(false)
+  const toggleComments = useCallback(() => setCommentsOpen((open) => !open), [])
   const { data: share } = useQuery({
     ...drawingShareQueryOptions(drawingId),
     enabled: !readOnly,
@@ -365,6 +374,12 @@ export function DrawingCanvas({
             : () => (
                 <>
                   <PresenceAvatars room={room} className={PRESENCE_CLASS} />
+                  <CommentsButton
+                    drawingId={drawingId}
+                    active={commentsOpen}
+                    onClick={toggleComments}
+                    className={SHARE_BUTTON_CLASS}
+                  />
                   <Button
                     data-tour="share"
                     onClick={() => setShareOpen(true)}
@@ -411,6 +426,14 @@ export function DrawingCanvas({
               </span>
             </MainMenu.Item>
           )}
+          <MainMenu.Item
+            // Read-only canvases have no top-right bar, so the menu is the way in.
+            className={readOnly ? undefined : SHARE_MENU_ITEM_CLASS}
+            icon={<MessageSquareIcon className="h-4 w-4" />}
+            onSelect={toggleComments}
+          >
+            Comments
+          </MainMenu.Item>
           {!readOnly && !isTeam && requestMoveToTeam && (
             <MainMenu.Item
               icon={<Users className="h-4 w-4" />}
@@ -462,6 +485,13 @@ export function DrawingCanvas({
         </TopLeftPortal>
       </Excalidraw>
       <FollowModeOverlay room={room} />
+      <CommentsLayer
+        drawingId={drawingId}
+        excalidrawAPI={excalidrawAPI}
+        readOnly={readOnly}
+        panelOpen={commentsOpen}
+        onPanelOpenChange={setCommentsOpen}
+      />
       {!readOnly && (
         <DrawingEditCard
           drawingId={drawingId}

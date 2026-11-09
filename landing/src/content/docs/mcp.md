@@ -1,6 +1,6 @@
 ---
 title: Connect an AI client
-description: Let Claude.ai, Claude Code, Claude Desktop, and other MCP clients find, read, create, import, change, export, and trash drawings, with every change applied only by you.
+description: Let Claude.ai, Claude Code, Claude Desktop, and other MCP clients find, read, create, import, change, export, comment on, and trash drawings, with every drawing change applied only by you.
 ---
 
 Excaliself has an [MCP](https://modelcontextprotocol.io) server at `/api/mcp`.
@@ -147,6 +147,11 @@ client still works, but you can't open the app.
 - `trash_drawing` and `trash_folder` move a drawing, or a folder with
   everything in it, to the trash. `restore_drawing` and `restore_folder` take
   them out again.
+- `list_comments` reads a drawing's [comment threads](/docs/comments/), with
+  the shape each one is pinned to. `add_comment` starts a thread on a shape
+  or on the drawing, `reply_to_comment` replies, and `resolve_comment`
+  resolves or reopens a thread. Comments appear at once, shown as yours
+  "via" the client's name.
 
 ## Change a drawing
 
@@ -212,8 +217,8 @@ base64 text and can get large. A file can be at most 10 MB.
 
 A token or a connected app acts as you: it sees what you see, and it can
 trash what you can trash. It can create drawings and folders, and move
-drawings between folders. It cannot change what is in a drawing until you
-click **Apply**, and it cannot delete anything for good: trashed items stay
+drawings between folders, and read and write comments. It cannot change what
+is in a drawing until you click **Apply**, and it cannot delete anything for good: trashed items stay
 in **Trash** for 30 days,
 where any member who can see them can restore them. Under **Settings**, then
 **MCP**, revoke a token or disconnect an app at any time.
