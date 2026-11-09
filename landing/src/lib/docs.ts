@@ -3,7 +3,7 @@ import { getCollection } from "astro:content"
 // The docs sidebar, in reading order. An id is a markdown file name without the extension.
 const sidebar = [
   { label: "Get started", pages: ["index"] },
-  { label: "Deploy", pages: ["docker-compose", "coolify", "backup-restore"] },
+  { label: "Deploy", pages: ["docker-compose", "coolify", "railway", "backup-restore"] },
   { label: "Configure", pages: ["environment", "single-sign-on"] },
   { label: "Use", pages: ["team-space", "sharing", "comments", "team-library", "organize", "import", "mcp"] },
   { label: "Administer", pages: ["members", "admin-recovery"] },
