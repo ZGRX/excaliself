@@ -1,9 +1,17 @@
 ---
 title: Railway
-description: Run the prebuilt image next to a Railway Postgres database.
+description: Deploy with one click from the Railway template, or set up the prebuilt image and a Postgres database by hand.
 ---
 
-## Deploy
+## Deploy with the template
+
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/excaliself)
+
+The template adds the app and a Postgres database, with the settings below
+already in place. It generates the auth secret and a domain. When the deploy
+finishes, open the domain to create the admin account.
+
+## Deploy by hand
 
 1. In a new Railway project, add a **PostgreSQL** database.
 2. Add a service from the Docker image `ghcr.io/maciekzygmunt/excaliself:latest`.

@@ -59,11 +59,10 @@ Data lives in memory and is gone when the container stops. For real use, see
 
 ## Deploy
 
-Both paths run the app and its Postgres database together from one compose file.
-They pull the prebuilt image `ghcr.io/maciekzygmunt/excaliself`
-(amd64 and arm64), so nothing is built on your server. `latest` is the newest
-release. The app applies database migrations when it starts, so updating is a
-redeploy.
+Each path runs the app next to its Postgres database and pulls the prebuilt
+image `ghcr.io/maciekzygmunt/excaliself` (amd64 and arm64), so nothing is built
+on your server. `latest` is the newest release. The app applies database
+migrations when it starts, so updating is running a newer image.
 
 ### Docker Compose
 
@@ -100,6 +99,15 @@ domain on the `excaliself` service with the container port, e.g.
 To pin a release instead of `latest`, set
 `EXCALISELF_VERSION` (e.g. `1.0.0`) in the resource's environment variables.
 Drawings live in the `pgdata` volume and survive redeploys.
+
+### Railway
+
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/excaliself)
+
+The template runs the app next to a Railway Postgres database. It generates the
+auth secret and a domain, so there is nothing to configure. Open the domain to create
+the admin account. To set it up by hand or to upgrade, see the
+[docs](https://excaliself.com/docs/railway/).
 
 ### Configuration
 
