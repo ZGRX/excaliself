@@ -4,7 +4,7 @@ import {
   type CanvasThemePreference,
   setCanvasThemePreference,
   setThemePreference,
-  type ThemePreference,
+  type ThemeChoice,
 } from "@/lib/theme"
 import { cn } from "@/lib/utils"
 
@@ -14,9 +14,10 @@ type Option<T extends string> = {
   icon: typeof SunIcon
 }
 
-const THEME_OPTIONS: Array<Option<ThemePreference>> = [
+const THEME_OPTIONS: Array<Option<ThemeChoice>> = [
   { value: "light", label: "Light", icon: SunIcon },
   { value: "dark", label: "Dark", icon: MoonIcon },
+  { value: "system", label: "System", icon: MonitorIcon },
 ]
 
 const CANVAS_OPTIONS: Array<Option<CanvasThemePreference>> = [
@@ -75,9 +76,10 @@ function ChoiceGroup<T extends string>({
 }
 
 // Appearance block (spec §4.4): Theme picks Light / Dark for the app
-// chrome; Canvas either follows it (Match app, the default) or pins the
-// drawing canvas to a theme of its own (#111). Both stored on this browser
-// only — these are the sole theme controls; the canvas has none of its own.
+// chrome, or System to follow the OS setting live; Canvas either follows it
+// (Match app, the default) or pins the drawing canvas to a theme of its own
+// (#111). Both stored on this browser only — these are the sole theme
+// controls; the canvas has none of its own.
 export function AppearanceSection() {
   const preference = useThemePreference()
   const canvasPreference = useCanvasThemePreference()

@@ -45,6 +45,12 @@ anyone in still works for it, as for anyone with the link. You can also delete
 your account there. The only admin of an instance must promote another member
 first.
 
+**Appearance** on the same page sets the theme for this browser: **Light**
+(the default), **Dark**, or **System**, which follows your device's light or
+dark setting and switches along with it. The drawing canvas follows the theme
+unless you pin it to Light or Dark there. Sign-in pages and share links stay
+light.
+
 ## Instance stats
 
 **Settings**, then **Instance**, shows an overview of the instance, including the

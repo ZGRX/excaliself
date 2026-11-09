@@ -7,8 +7,12 @@ import {
   readResolvedTheme,
   readStoredCanvasThemePreference,
   readStoredThemePreference,
+  readSystemTheme,
   resolveCanvasTheme,
+  resolveThemeChoice,
+  subscribeToSystemTheme,
   subscribeToTheme,
+  type ThemeChoice,
   type ThemePreference,
 } from "@/lib/theme"
 
@@ -24,17 +28,25 @@ export function useApplyTheme(theme: ThemePreference) {
  * The app shell's theme driver: applies the stored device choice on mount
  * (the pre-paint bootstrap already did on a fresh load; this covers SPA
  * navigation out of a forced-light auth page). Later changes go through
- * setThemePreference, which applies as it saves.
+ * setThemePreference, which applies as it saves. While System is chosen it
+ * also follows the OS live — the only time the OS is listened to; the
+ * listener goes away with the shell, so forced-light pages stay light.
  */
 export function useStoredTheme() {
+  const choice = useThemePreference()
   useEffect(() => {
-    applyResolvedTheme(readStoredThemePreference() ?? DEFAULT_THEME)
-  }, [])
+    // Storage first: while hydrating, `choice` still holds the server
+    // default, and applying that would flash Light over a stored Dark.
+    const current = readStoredThemePreference() ?? choice
+    applyResolvedTheme(resolveThemeChoice(current))
+    if (current !== "system") return
+    return subscribeToSystemTheme(() => applyResolvedTheme(readSystemTheme()))
+  }, [choice])
 }
 
 // The stored choice as a reactive value — the Appearance control renders
 // from this so a click updates its checked state through the store.
-export function useThemePreference(): ThemePreference {
+export function useThemePreference(): ThemeChoice {
   return useSyncExternalStore(
     subscribeToTheme,
     () => readStoredThemePreference() ?? DEFAULT_THEME,

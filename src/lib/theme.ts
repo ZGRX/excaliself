@@ -1,15 +1,23 @@
 export type ThemePreference = "light" | "dark"
 
+// What the user picks in Settings: an explicit theme, or "system" to follow
+// the OS light/dark setting (live). ThemePreference stays the resolved,
+// applied theme.
+export type ThemeChoice = ThemePreference | "system"
+
 // The device-scoped theme choice. localStorage is the source of truth —
 // deliberately not synced to the account (owner decision): each browser
 // keeps its own choice, and it survives sign-out. The key predates this
-// module (next-themes convention), so older stored values keep working;
-// anything but "dark" (including a legacy "system") reads as unset.
+// module (next-themes convention), so older stored values keep working,
+// including a legacy "system"; anything else reads as unset.
 export const THEME_STORAGE_KEY = "theme"
 
-// Light unless the user explicitly chose Dark in Settings. The OS
-// preference is deliberately never consulted.
-export const DEFAULT_THEME: ThemePreference = "light"
+// Light unless the user explicitly chose Dark or System in Settings. The OS
+// preference is consulted only when System is chosen.
+export const DEFAULT_THEME: ThemeChoice = "light"
+
+// The media query behind the System choice.
+export const SYSTEM_DARK_QUERY = "(prefers-color-scheme: dark)"
 
 // Browser-chrome tints for the theme-color meta: the --background tokens
 // from styles.css (the Etched chrome, light / dark).
@@ -20,6 +28,41 @@ export const THEME_COLORS: Record<ThemePreference, string> = {
 
 export function isThemePreference(value: unknown): value is ThemePreference {
   return value === "light" || value === "dark"
+}
+
+export function isThemeChoice(value: unknown): value is ThemeChoice {
+  return value === "system" || isThemePreference(value)
+}
+
+// The OS light/dark setting. matchMedia can be missing (old browsers,
+// jsdom); that reads as Light, the app default.
+export function readSystemTheme(): ThemePreference {
+  try {
+    return window.matchMedia(SYSTEM_DARK_QUERY).matches ? "dark" : "light"
+  } catch {
+    return "light"
+  }
+}
+
+// A choice → the theme to apply. Only System reads the OS.
+export function resolveThemeChoice(choice: ThemeChoice): ThemePreference {
+  return choice === "system" ? readSystemTheme() : choice
+}
+
+/**
+ * Calls `listener` whenever the OS switches between light and dark. Only
+ * the app shell subscribes, and only while System is chosen, so the OS
+ * stays unconsulted for Light and Dark.
+ */
+export function subscribeToSystemTheme(listener: () => void): () => void {
+  let query: MediaQueryList
+  try {
+    query = window.matchMedia(SYSTEM_DARK_QUERY)
+  } catch {
+    return () => {}
+  }
+  query.addEventListener("change", listener)
+  return () => query.removeEventListener("change", listener)
 }
 
 // The canvas override: "match" follows the app theme; "light"/"dark" pin
@@ -84,10 +127,10 @@ export function resolveCanvasTheme(
 
 // localStorage can throw (privacy modes); an unreadable store means the
 // Light default everywhere, so failures are swallowed.
-export function readStoredThemePreference(): ThemePreference | null {
+export function readStoredThemePreference(): ThemeChoice | null {
   try {
     const stored = window.localStorage.getItem(THEME_STORAGE_KEY)
-    return isThemePreference(stored) ? stored : null
+    return isThemeChoice(stored) ? stored : null
   } catch {
     return null
   }
@@ -95,11 +138,11 @@ export function readStoredThemePreference(): ThemePreference | null {
 
 // The Appearance control's write path: persist and apply in one step.
 // Writing localStorage can't meaningfully fail, so there is no error flow.
-export function setThemePreference(preference: ThemePreference) {
+export function setThemePreference(preference: ThemeChoice) {
   try {
     window.localStorage.setItem(THEME_STORAGE_KEY, preference)
   } catch {}
-  applyResolvedTheme(preference)
+  applyResolvedTheme(resolveThemeChoice(preference))
 }
 
 // Invalid or legacy stored values read as Match app, per spec (#111).
@@ -130,15 +173,17 @@ const LOGGED_OUT_PREFIX = "/share/"
 /**
  * Inlined into the document head (after the theme-color meta) so the right
  * theme is on the root element while the SSR'd HTML is still parsing — a
- * reload never flashes the wrong theme. Dark only when explicitly stored
- * and not on a logged-out page; kept dependency-free because it runs
+ * reload never flashes the wrong theme. Dark when explicitly stored, or
+ * when System is stored and the OS is dark — never on a logged-out page,
+ * where the OS isn't even read. Kept dependency-free because it runs
  * before any bundle.
  */
 export const themeBootstrapScript = [
   "try{",
-  `var d=localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)})==="dark"`,
-  `&&${JSON.stringify(LOGGED_OUT_PATHS)}.indexOf(location.pathname)<0`,
-  `&&location.pathname.indexOf(${JSON.stringify(LOGGED_OUT_PREFIX)})!==0;`,
+  `var t=localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});`,
+  `var d=${JSON.stringify(LOGGED_OUT_PATHS)}.indexOf(location.pathname)<0`,
+  `&&location.pathname.indexOf(${JSON.stringify(LOGGED_OUT_PREFIX)})!==0`,
+  `&&(t==="dark"||(t==="system"&&window.matchMedia(${JSON.stringify(SYSTEM_DARK_QUERY)}).matches));`,
   'document.documentElement.classList.toggle("dark",d);',
   "var m=document.querySelector('meta[name=\"theme-color\"]');",
   `if(m)m.setAttribute("content",d?${JSON.stringify(THEME_COLORS.dark)}:${JSON.stringify(THEME_COLORS.light)});`,

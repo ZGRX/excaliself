@@ -52,7 +52,7 @@ docker run --rm -p 127.0.0.1:3000:3000 -e PREVIEW_MODE=true ghcr.io/maciekzygmun
 - **连接 AI 客户端**：Claude.ai、Claude Code、Claude Desktop 等 MCP 客户端可以查找、读取、创建和导出绘图，提议修改绘图，也可以把绘图移入回收站。修改提议会显示在画布上，只有你点击 Apply（应用）后才会生效，并实时同步给绘图中的所有人。客户端通过 OAuth 授权或个人访问令牌接入，Excaliself 无需配置大语言模型（LLM）的 API 密钥。
 - **单点登录**：支持 Google Workspace、Microsoft Entra ID 和其他支持 OIDC 的身份服务（如 Okta、Authentik、Keycloak）。使用指定邮箱域名的用户可在首次登录时直接加入，无需邀请。
 - **管理员工具**：在“设置”中管理成员和角色、创建密码重置链接，并查看实例统计信息。
-- **浅色与深色主题**：还可以为画布单独设置主题。
+- **浅色与深色主题**：也可以跟随系统设置自动切换，还可以为画布单独设置主题。
 
 ## 部署
 

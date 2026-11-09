@@ -55,7 +55,7 @@ Data lives in memory and is gone when the container stops. For real use, see
 - **Connect your AI client.** Claude.ai, Claude Code, Claude Desktop, and other MCP clients can find, read, create, and export drawings, propose changes to them, and move them to the trash. A change waits on the canvas until you click Apply, and then everyone in the drawing sees it live. Clients sign in with OAuth or a personal access token. The instance needs no LLM API key.
 - **Single sign-on** with Google Workspace, Microsoft Entra ID, or any OIDC provider (Okta, Authentik, Keycloak). People from your email domains join on their first sign-in, with no invite.
 - **Admin tools** under Settings: manage members and roles, create password-reset links, and see instance stats.
-- **Light and dark themes**, with an optional separate theme for the canvas.
+- **Light and dark themes**, or follow the system setting, with an optional separate theme for the canvas.
 
 ## Deploy
 

@@ -2,12 +2,15 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest"
 import {
   applyResolvedTheme,
   isCanvasThemePreference,
+  isThemeChoice,
   isThemePreference,
   readStoredCanvasThemePreference,
   readStoredThemePreference,
   resolveCanvasTheme,
+  resolveThemeChoice,
   setCanvasThemePreference,
   setThemePreference,
+  subscribeToSystemTheme,
   subscribeToTheme,
   THEME_COLORS,
   themeBootstrapScript,
@@ -40,11 +43,68 @@ function appliedDark() {
   return document.documentElement.classList.contains("dark")
 }
 
-test("isThemePreference accepts exactly light and dark — no system tier", () => {
+// A stand-in for the OS light/dark setting: jsdom has no matchMedia.
+function stubSystemTheme(dark: boolean) {
+  const listeners = new Set<() => void>()
+  const query = {
+    matches: dark,
+    addEventListener: (_: string, listener: () => void) =>
+      listeners.add(listener),
+    removeEventListener: (_: string, listener: () => void) =>
+      listeners.delete(listener),
+  }
+  const matchMedia = vi.fn(() => query)
+  vi.stubGlobal("matchMedia", matchMedia)
+  return {
+    matchMedia,
+    listeners,
+    change(nextDark: boolean) {
+      query.matches = nextDark
+      for (const listener of [...listeners]) listener()
+    },
+  }
+}
+
+test("isThemePreference accepts exactly light and dark", () => {
   expect(isThemePreference("light")).toBe(true)
   expect(isThemePreference("dark")).toBe(true)
   expect(isThemePreference("system")).toBe(false)
   expect(isThemePreference(null)).toBe(false)
+})
+
+test("isThemeChoice accepts light, dark and system", () => {
+  expect(isThemeChoice("light")).toBe(true)
+  expect(isThemeChoice("dark")).toBe(true)
+  expect(isThemeChoice("system")).toBe(true)
+  expect(isThemeChoice("banana")).toBe(false)
+  expect(isThemeChoice(null)).toBe(false)
+})
+
+test("resolveThemeChoice: System reads the OS; Light and Dark never do", () => {
+  const os = stubSystemTheme(true)
+  expect(resolveThemeChoice("light")).toBe("light")
+  expect(resolveThemeChoice("dark")).toBe("dark")
+  expect(os.matchMedia).not.toHaveBeenCalled()
+
+  expect(resolveThemeChoice("system")).toBe("dark")
+  os.change(false)
+  expect(resolveThemeChoice("system")).toBe("light")
+})
+
+test("resolveThemeChoice: System without matchMedia falls back to Light", () => {
+  expect(resolveThemeChoice("system")).toBe("light")
+})
+
+test("subscribeToSystemTheme reports OS changes until unsubscribed", () => {
+  const os = stubSystemTheme(false)
+  const listener = vi.fn()
+  const unsubscribe = subscribeToSystemTheme(listener)
+  os.change(true)
+  expect(listener).toHaveBeenCalledTimes(1)
+  unsubscribe()
+  expect(os.listeners.size).toBe(0)
+  os.change(false)
+  expect(listener).toHaveBeenCalledTimes(1)
 })
 
 test("applyResolvedTheme drives the root class, the theme-color meta and subscribers", () => {
@@ -73,11 +133,28 @@ test("setThemePreference persists and applies in one step — the round-trip", (
   expect(appliedDark()).toBe(false)
 })
 
-test("junk in storage — including a legacy 'system' — reads as unset", () => {
-  window.localStorage.setItem("theme", "system")
-  expect(readStoredThemePreference()).toBeNull()
+test("setThemePreference('system') persists System and applies the OS theme", () => {
+  stubSystemTheme(true)
+  setThemePreference("system")
+  expect(window.localStorage.getItem("theme")).toBe("system")
+  expect(readStoredThemePreference()).toBe("system")
+  expect(appliedDark()).toBe(true)
+  expect(meta.content).toBe(THEME_COLORS.dark)
+})
+
+test("an explicit Light or Dark choice never consults the OS", () => {
+  const os = stubSystemTheme(true)
+  setThemePreference("dark")
+  setThemePreference("light")
+  expect(appliedDark()).toBe(false)
+  expect(os.matchMedia).not.toHaveBeenCalled()
+})
+
+test("junk in storage reads as unset; a stored 'system' reads as System", () => {
   window.localStorage.setItem("theme", "banana")
   expect(readStoredThemePreference()).toBeNull()
+  window.localStorage.setItem("theme", "system")
+  expect(readStoredThemePreference()).toBe("system")
 })
 
 test("resolveCanvasTheme: Match app follows the app theme", () => {
@@ -148,7 +225,29 @@ test("bootstrap: a stored dark choice applies before first paint", () => {
   expect(meta.content).toBe(THEME_COLORS.dark)
 })
 
-test("bootstrap: a legacy 'system' value falls back to Light", () => {
+test("bootstrap: a stored dark choice never consults the OS", () => {
+  const os = stubSystemTheme(false)
+  window.localStorage.setItem("theme", "dark")
+  runBootstrap()
+  expect(appliedDark()).toBe(true)
+  expect(os.matchMedia).not.toHaveBeenCalled()
+})
+
+test.each([
+  [true, "dark"],
+  [false, "light"],
+] as const)(
+  "bootstrap: a stored System choice follows the OS before first paint (OS dark: %s)",
+  (osDark, expected) => {
+    stubSystemTheme(osDark)
+    window.localStorage.setItem("theme", "system")
+    runBootstrap()
+    expect(appliedDark()).toBe(expected === "dark")
+    expect(meta.content).toBe(THEME_COLORS[expected])
+  },
+)
+
+test("bootstrap: System without matchMedia stays Light", () => {
   window.localStorage.setItem("theme", "system")
   runBootstrap()
   expect(appliedDark()).toBe(false)
@@ -163,5 +262,17 @@ test.each(["/login", "/setup", "/invite", "/reset-password"])(
     runBootstrap()
     expect(appliedDark()).toBe(false)
     expect(meta.content).toBe(THEME_COLORS.light)
+  },
+)
+
+test.each(["/login", "/share/abc"])(
+  "bootstrap: %s stays light with System on a dark OS, without reading the OS",
+  (path) => {
+    const os = stubSystemTheme(true)
+    window.history.replaceState({}, "", path)
+    window.localStorage.setItem("theme", "system")
+    runBootstrap()
+    expect(appliedDark()).toBe(false)
+    expect(os.matchMedia).not.toHaveBeenCalled()
   },
 )

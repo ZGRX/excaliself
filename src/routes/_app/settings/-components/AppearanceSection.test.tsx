@@ -5,7 +5,7 @@ import {
   screen,
   within,
 } from "@testing-library/react"
-import { afterEach, expect, test } from "vitest"
+import { afterEach, expect, test, vi } from "vitest"
 import { AppearanceSection } from "./AppearanceSection"
 
 // Auto-cleanup needs vitest globals, which this repo leaves off.
@@ -13,6 +13,7 @@ afterEach(cleanup)
 afterEach(() => {
   document.documentElement.classList.remove("dark")
   window.localStorage.clear()
+  vi.unstubAllGlobals()
 })
 
 function group(name: string) {
@@ -25,17 +26,41 @@ function checked(groupName: string, name: string) {
     .getAttribute("aria-checked")
 }
 
-test("Theme offers Light and Dark only — a user who never chose has Light selected", () => {
+test("Theme offers Light, Dark and System — a user who never chose has Light selected", () => {
   render(<AppearanceSection />)
   expect(checked("Theme", "Light")).toBe("true")
   expect(checked("Theme", "Dark")).toBe("false")
-  expect(group("Theme").queryByRole("radio", { name: "System" })).toBeNull()
+  expect(checked("Theme", "System")).toBe("false")
 })
 
 test("a stored dark choice renders with Dark selected", () => {
   window.localStorage.setItem("theme", "dark")
   render(<AppearanceSection />)
   expect(checked("Theme", "Dark")).toBe("true")
+})
+
+test("a stored System choice renders with System selected", () => {
+  window.localStorage.setItem("theme", "system")
+  render(<AppearanceSection />)
+  expect(checked("Theme", "System")).toBe("true")
+  expect(checked("Theme", "Light")).toBe("false")
+})
+
+test("picking System persists it and applies the OS theme", () => {
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn(() => ({
+      matches: true,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    })),
+  )
+  render(<AppearanceSection />)
+  fireEvent.click(group("Theme").getByRole("radio", { name: "System" }))
+  expect(window.localStorage.getItem("theme")).toBe("system")
+  expect(document.documentElement.classList.contains("dark")).toBe(true)
+  expect(checked("Theme", "System")).toBe("true")
+  expect(checked("Theme", "Light")).toBe("false")
 })
 
 test("picking Dark applies and persists immediately, and the control follows", () => {
