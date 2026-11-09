@@ -44,6 +44,53 @@ export default (options) => nodeAdapter({
 }
 
 /**
+ * Nitro's Node entry owns the listener. Wrap its srvx call so the preview URL
+ * is printed only after the listener has a bound port.
+ */
+function previewSignIn(): Plugin {
+  const wrapperId = "\0preview-sign-in"
+  let srvxId = ""
+  return {
+    name: "preview-sign-in",
+    resolveId: {
+      order: "pre",
+      async handler(source, importer) {
+        if (
+          source !== "srvx/node" ||
+          !importer?.endsWith("/presets/node/runtime/node-server.mjs")
+        )
+          return
+        const srvx = await this.resolve(source, importer, { skipSelf: true })
+        if (!srvx)
+          throw new Error("preview-sign-in: srvx node adapter not found")
+        srvxId = srvx.id
+        return wrapperId
+      },
+    },
+    load(id) {
+      if (id !== wrapperId) return
+      return `import { serve as serveNode } from ${JSON.stringify(srvxId)}
+export * from ${JSON.stringify(srvxId)}
+import { env } from "@/env"
+import { logPreviewSignIn } from "@/lib/preview-sign-in"
+export function serve(options) {
+  const server = serveNode(options)
+  if (env.PREVIEW_MODE) {
+    const listener = server.node.server
+    listener.once("listening", () => {
+      const address = listener.address()
+      if (address && typeof address !== "string") {
+        logPreviewSignIn(env.BASE_URL, address.port)
+      }
+    })
+  }
+  return server
+}`
+    },
+  }
+}
+
+/**
  * Serve Excalidraw's fonts from the app instead of its esm.sh default, so
  * visitors never reach a third party. Excalidraw fetches them from
  * `${window.EXCALIDRAW_ASSET_PATH}fonts/...`; __root.tsx sets that global.
@@ -106,7 +153,7 @@ const config = defineConfig({
       serverDir: "server",
       features: { websocket: true },
       rolldownConfig: {
-        plugins: [wsFrameCap()],
+        plugins: [wsFrameCap(), previewSignIn()],
         output: {
           codeSplitting: {
             groups: [
