@@ -80,7 +80,7 @@ export function serve(options) {
     listener.once("listening", () => {
       const address = listener.address()
       if (address && typeof address !== "string") {
-        logPreviewSignIn(env.BASE_URL, address.port, Boolean(options.tls))
+        logPreviewSignIn(env.BASE_URL, address.port)
       }
     })
   }
