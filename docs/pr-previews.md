@@ -44,10 +44,10 @@ apps.
    | `DATABASE_URL` | Empty. Preview mode does not use it, and a copied value can hold the production password |
    | `GOOGLE_CLIENT_SECRET`, `MICROSOFT_CLIENT_SECRET`, `OIDC_CLIENT_SECRET` | Empty. Preview mode turns off single sign-on |
 
-   Also clear any other secret that you added to production. Clear the copied
-   `BASE_URL` or set it to the preview's public URL, since the server uses it
-   for the sign-in link in startup logs. If a client secret still reaches the
-   preview, its log shows a `[preview] ... set` warning at boot.
+   Also clear any other secret that you added to production. `BASE_URL` and
+   the other single sign-on variables are not secret and can keep the copied
+   values. If a client secret still reaches the preview, its log shows a
+   `[preview] ... set` warning at boot.
 
    Turn on **Runtime** for each preview variable. Coolify can copy them with
    Runtime off, and then it uses the production value in the preview.
