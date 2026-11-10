@@ -89,6 +89,8 @@ function excalidrawFonts(): Plugin {
 }
 
 const config = defineConfig({
+  // roughjs uses extensionless imports that Node cannot resolve directly.
+  ssr: { noExternal: ["roughjs"] },
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
